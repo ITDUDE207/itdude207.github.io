@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Refresh Joke Generator</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #111827 0%, #312e81 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 550px;
+            width: 90%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top Progress Bar for Timer Tracker */
+        .progress-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background-color: #e5e7eb;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #10b981;
+            transform-origin: left;
+            transition: transform 1s linear;
+        }
+
+        h1 {
+            color: #1f2937;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .timer-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        .category-badge {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .joke-display {
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3rem;
+            color: #111827;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        .setup {
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .delivery {
+            color: #b45309;
+            font-style: italic;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.4s ease;
+        }
+
+        .delivery.reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .primary-btn {
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+        }
+
+        .secondary-btn {
+            background-color: #f59e0b;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .secondary-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <h1>Laugh Factory</h1>
+        <div class="timer-text" id="timerText">Next joke in 60s</div>
+        
+        <span class="category-badge" id="category">Loading...</span>
+        
+        <div class="joke-display" id="jokeBox">
+            <div id="loader" class="loader"></div>
+            <div id="textElement"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn secondary-btn" id="revealBtn" onclick="revealDelivery()">Reveal Punchline</button>
+            <button class="btn primary-btn" id="nextBtn" onclick="manualRefresh()">Skip Joke</button>
+        </div>
+    </div>
+
+    <script>
+        const categoryBadge = document.getElementById('category');
+        const jokeBox = document.getElementById('jokeBox');
+        const textElement = document.getElementById('textElement');
+        const revealBtn = document.getElementById('revealBtn');
+        const loader = document.getElementById('loader');
+        const progressBar = document.getElementById('progressBar');
+        const timerText = document.getElementById('timerText');
+
+        const apiURL = "https://jokeapi.dev";
+        
+        const JOKE_DURATION = 60; // seconds
+        let timeLeft = JOKE_DURATION;
+        let countdownTimer;
+
+        async function getJoke() {
+            // Reset Layout State
+            textElement.style.display = 'none';
+            revealBtn.classList.remove('visible');
+            loader.style.display = 'block';
+            
+            // Clean out old nested nodes
+            jokeBox.querySelectorAll('.setup, .delivery').forEach(el => el.remove());
+
+            try {
+                const response = await fetch(apiURL);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                
+                categoryBadge.textContent = data.category;
+                
+                if (data.type === "single") {
+                    textElement.innerHTML = data.joke;
+                    textElement.style.display = 'block';
+                } else if (data.type === "twopart") {
+                    const setupDiv = document.createElement('div');
+                    setupDiv.className = 'setup';
+                    setupDiv.textContent = data.setup;
+                    
+                    const deliveryDiv = document.createElement('div');
+                    deliveryDiv.className = 'delivery';
+                    deliveryDiv.id = 'deliveryText';
+                    deliveryDiv.textContent = data.delivery;
+                    
+                    jokeBox.appendChild(setupDiv);
+                    jokeBox.appendChild(deliveryDiv);
+                    
+                    revealBtn.classList.add('visible');
+                    
+                    // Auto-reveal punchline halfway through the minute if the user hasn't clicked it
+                    setTimeout(() => {
+                        if (document.getElementById('deliveryText')) {
+                            revealDelivery();
+                        }
+                    }, JOKE_DURATION * 500); 
+                }
+            } catch (error) {
+                textElement.textContent = "Failed to load joke. retrying soon...";
+                textElement.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                resetTimer();
+            }
+        }
+
+        function revealDelivery() {
+            const deliveryText = document.getElementById('deliveryText');
+            if (deliveryText) {
+                deliveryText.classList.add('reveal');
+                revealBtn.classList.remove('visible');
+            }
+        }
+
+        function startTimer() {
+            countdownTimer = setInterval(() => {
+                timeLeft--;
+                timerText.textContent = `Next joke in ${timeLeft}s`;
+                
+                // Shrink the progress bar width smoothly over time
+                const scaleX = timeLeft / JOKE_DURATION;
+                progressBar.style.transform = `scaleX(${scaleX})`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownTimer);
+                    getJoke();
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(countdownTimer);
+            timeLeft = JOKE_DURATION;
+            timerText.textContent = `Next joke in ${timeLeft}s`;
+            progressBar.style.transform = 'scaleX(1)';
+            startTimer();
+        }
+
+        function manualRefresh() {
+            getJoke();
+        }
+
+        // Initialize App immediately
+        getJoke();
+    </script>
+
+</body>
+</html>
