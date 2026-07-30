@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stress Buster Bubble Wrap!</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #4a4a4a;
+            margin-bottom: 5px;
+        }
+
+        p {
+            color: #7a7a7a;
+            margin-top: 0;
+        }
+
+        .stats {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+
+        .wrap-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            background-color: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .bubble {
+            aspect-ratio: 1;
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #add8e6 40%, #87ceeb 70%, #4682b4 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), inset 0 -3px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.1s ease, background 0.1s ease;
+        }
+
+        .bubble:active {
+            transform: scale(0.9);
+        }
+
+        .bubble.popped {
+            background: radial-gradient(circle at 50% 50%, #f1f5f9 60%, #cbd5e1 100%);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            cursor: default;
+            transform: scale(0.95);
+        }
+
+        .btn {
+            margin-top: 25px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background-color: #4caf50;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Pop! Pop!</h1>
+        <p>Virtual stress relief. Best with sound turned up!</p>
+        <div class="stats">Bubbles Popped: <span id="counter">0</span></div>
+        
+        <div class="wrap-grid" id="grid">
+            <!-- Bubbles will be generated here by JavaScript -->
+        </div>
+
+        <button class="btn" onclick="resetWrap()">Get Fresh Sheet</button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const counterDisplay = document.getElementById('counter');
+        const bubbleCount = 36; 
+        let poppedCount = 0;
+
+        // Web Audio API context for synth pop sound
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPopSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            // Quick pitch slide down simulates a pop
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.05);
+            
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.06);
+        }
+
+        function createWrap() {
+            grid.innerHTML = '';
+            for (let i = 0; i < bubbleCount; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                bubble.addEventListener('click', function() {
+                    if (!this.classList.contains('popped')) {
+                        this.classList.add('popped');
+                        playPopSound();
+                        poppedCount++;
+                        counterDisplay.textContent = poppedCount;
+                    }
+                });
+                grid.appendChild(bubble);
+            }
+        }
+
+        function resetWrap() {
+            createWrap();
+        }
+
+        // Initialize the first sheet
+        createWrap();
+    </script>
+
+</body>
+</html>
