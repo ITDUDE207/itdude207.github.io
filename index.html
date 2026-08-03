@@ -1,8 +1,46 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕹️ Arcade Hub</title>
+    <style>
+        body { background: #0a0a0f; color: #fff; font-family: monospace; text-align: center; padding: 50px 20px; }
+        h1 { color: #00f3ff; text-shadow: 0 0 15px #00f3ff; font-size: 2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 650px; margin: 40px auto; }
+        .card { background: #12121a; border: 2px solid #333; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card:hover { border-color: #555; }
+        h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        p { color: #aaa; font-size: 0.9rem; line-height: 1.4; margin: 0 0 20px 0; }
+        .btn { display: block; padding: 12px; font-weight: bold; text-decoration: none; border-radius: 4px; border: 2px solid #444; background: #222; font-family: inherit; transition: all 0.2s; }
+        .c1:hover { color: #000; background: #ff0055; border-color: #ff0055; box-shadow: 0 0 15px #ff0055; }
+        .c2:hover { color: #000; background: #00f3ff; border-color: #00f3ff; box-shadow: 0 0 15px #00f3ff; }
+    </style>
 </head>
-  <body>
-    <h1>Hi</h1>
-  </body>
+<body>
+
+    <h1>HTML ARCADE CABINET</h1>
+    <p style="color: #666;">Select a standalone game system deck below</p>
+
+    <div class="grid">
+        <!-- GAME 1 -->
+        <div class="card">
+            <div>
+                <h3 style="color: #ff0055;">🎯 Button Evader</h3>
+                <p>An unwinnable button that teleports away, generates sound waves, and triggers phantom duplicate targets.</p>
+            </div>
+            <a href="button.html" class="btn c1">🕹️ LAUNCH GAME</a>
+        </div>
+
+        <!-- GAME 2 -->
+        <div class="card">
+            <div>
+                <h3 style="color: #00f3ff;">🌪️ Sluggish Maze</h3>
+                <p>A precision coordinate maze where your standard mouse pointer is replaced by a lagging custom physics tracker.</p>
+            </div>
+            <a href="maze.html" class="btn c2">🕹️ LAUNCH GAME</a>
+        </div>
+    </div>
+
+</body>
 </html>
