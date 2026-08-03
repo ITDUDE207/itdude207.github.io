@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌪️ THE HEAVY FRICTION MAZE 🌪️</title>
+    <style>
+        body {
+            background-color: #0b0c10;
+            color: #66fcf1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            /* 1. HIDE THE REAL SYSTEM CURSOR COMPLETELY */
+            cursor: none; 
+            user-select: none;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            text-shadow: 0 0 10px #66fcf1;
+        }
+
+        p {
+            color: #c5c6c7;
+            margin: 0 0 20px 0;
+        }
+
+        /* 2. THE CUSTOM FAKE CURSOR */
+        #fake-cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background-color: #66fcf1;
+            border-radius: 50%;
+            pointer-events: none; /* Let clicks pass straight through it */
+            z-index: 9999;
+            box-shadow: 0 0 10px #66fcf1;
+            transform: translate(-50%, -50%);
+            /* Smooth step interpolation creates the heavy drag feeling */
+            transition: left 0.05s linear, top 0.05s linear; 
+        }
+
+        /* The game board grid container */
+        #maze-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            background-color: #1f2833;
+            border: 4px solid #45f3ff;
+            border-radius: 8px;
+            box-shadow: 0 0 25px rgba(102, 252, 241, 0.2);
+        }
+
+        /* Safe Track Paths */
+        .path {
+            position: absolute;
+            background-color: #0b0c10;
+        }
+
+        /* Friction/Mud Zones: Adds heavy latency */
+        .mud-zone {
+            position: absolute;
+            background: repeating-linear-gradient(
+                45deg,
+                #3a2200,
+                #3a2200 10px,
+                #573300 10px,
+                #573300 20px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #ff9900;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* Visual Obstacles (Walls) - Hitting these triggers system shock */
+        .wall {
+            position: absolute;
+            background-color: #1f2833;
+        }
+
+        /* Start & Finish Nodes */
+        .node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border-radius: 4px;
+        }
+        #start { background-color: #00ff66; color: #000; left: 10px; top: 20px; width: 80px; height: 50px; }
+        #finish { background-color: #ff3333; color: #fff; right: 10px; bottom: 20px; width: 80px; height: 50px; }
+
+        /* Screen Shake Animation for Wall Crashes */
+        @keyframes rumble {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-5px, 5px) rotate(-1deg); }
+            40% { transform: translate(5px, -5px) rotate(1deg); }
+            60% { transform: translate(-5px, -5px) rotate(-1deg); }
+            80% { transform: translate(5px, 5px) rotate(1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .shake {
+            animation: rumble 0.3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>THE SLUGGISH LABYRINTH</h1>
+    <p>Guide the cyan dot from START to FINISH. Watch out for deep mud!</p>
+
+    <!-- 3. FAKE CURSOR OBJECT -->
+    <div id="fake-cursor"></div>
+
+    <!-- 4. THE MAZE COMPOSITION LAYOUT -->
+    <div id="maze-container">
+        <!-- The Safe Walkway tracks -->
+        <div class="path" style="left: 10px; top: 20px; width: 200px; height: 50px;"></div>
+        <div class="path" style="left: 160px; top: 20px; width: 50px; height: 300px;"></div>
+        
+        <!-- THE MUD ZONE (Adds layout friction) -->
+        <div class="mud-zone" style="left: 160px; top: 320px; width: 350px; height: 80px;">⚠️ DEEP MUD (LAG) ⚠️</div>
+        
+        <div class="path" style="left: 460px; top: 120px; width: 50px; height: 280px;"></div>
+        <div class="path" style="left: 460px; top: 120px; width: 310px; height: 50px;"></div>
+        <div class="path" style="left: 720px; top: 120px; width: 50px; height: 310px;"></div>
+
+        <!-- Start / Finish Markers -->
+        <div id="start" class="node">START</div>
+        <div id="finish" class="node">FINISH</div>
+    </div>
+
+    <script>
+        const cursor = document.getElementById('fake-cursor');
+        const maze = document.getElementById('maze-container');
+        
+        // Internal variables tracking physics states
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let dynamicFriction = 0.12; // Base responsiveness (Lower = more drag)
+
+        // Keep updating actual hardware mouse coordinates
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+        });
+
+        // 🧠 The Physics Loop (Linear Interpolation / Lerp)
+        function updatePhysics() {
+            // Calculate the distance gap between real hand and fake visual dot
+            let dx = targetX - currentX;
+            let dy = targetY - currentY;
+
+            // Incrementally slide the current position closer by a fraction amount
+            currentX += dx * dynamicFriction;
+            currentY += dy * dynamicFriction;
+
+            // Apply style positions instantly to layout coordinates
+            cursor.style.left = `${currentX}px`;
+            cursor.style.top = `${currentY}px`;
+
+            // Check collision mechanics under the fake cursor dot
+            checkCollision();
+
+            requestAnimationFrame(updatePhysics);
+        }
+        requestAnimationFrame(updatePhysics);
+
+        // 🔬 Real-time Element Scan Loop
+        function checkCollision() {
+            // Find what element sits directly underneath our lagging fake pointer coordinates
+            const elementUnderCursor = document.elementFromPoint(currentX, currentY);
+
+            if (!elementUnderCursor) return;
+
+            // State 1: Inside Mud Layer -> Turn down physics responsiveness severely
+            if (elementUnderCursor.classList.contains('mud-zone')) {
+                dynamicFriction = 0.02; // Massive layout drag!
+                cursor.style.backgroundColor = '#ff9900';
+                cursor.style.boxShadow = '0 0 15px #ff9900';
+            } 
+            // State 2: Back on normal pathways -> Restore control speeds
+            else if (elementUnderCursor.classList.contains('path') || elementUnderCursor.id === 'start') {
+                dynamicFriction = 0.15; 
+                cursor.style.backgroundColor = '#66fcf1';
+                cursor.style.boxShadow = '0 0 10px #66fcf1';
+            }
+            // State 3: Hit Destination -> Triumph!
+            else if (elementUnderCursor.id === 'finish') {
+                alert("🏆 VICTORY! You managed to pull through the physics trap!");
+                window.location.reload();
+            }
+            // State 4: Stepped out of bounds onto a wall container block -> Crash!
+            else if (elementUnderCursor.id === 'maze-container') {
+                triggerFailState();
+            }
+        }
+
+        let isCrashing = false;
+        function triggerFailState() {
+            if (isCrashing) return;
+            isCrashing = true;
+            
+            // Apply vibrating shake class to whole screen viewport structure
+            document.body.classList.add('shake');
+            cursor.style.backgroundColor = '#ff3333';
+            
+            setTimeout(() => {
+                document.body.classList.remove('shake');
+                alert("💥 CRASHED! You drifted off the layout path!");
+                isCrashing = false;
+                // Reset user loop coordinate positions safely back to start zone
+                window.location.reload();
+            }, 300);
+        }
+    </script>
+
+</body>
+</html>
