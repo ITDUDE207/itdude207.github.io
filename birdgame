@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎤 Voice Flappy</title>
+    <style>
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; overflow: hidden; }
+        #stage { position: relative; width: 400px; height: 400px; background: #222; border: 4px solid #ffd700; margin: 20px auto; overflow: hidden; }
+        #player { position: absolute; width: 25px; height: 25px; background: #ff3366; left: 50px; top: 180px; box-shadow: 0 0 10px #ff3366; }
+        .pipe { position: absolute; width: 50px; background: #00ff66; border: 1px solid #fff; }
+        #menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        button { padding: 10px 20px; font-weight: bold; background: #ffd700; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>SCORE: <span id="score">0</span></h2>
+    <div id="stage">
+        <div id="menu">
+            <p>Shout <strong>"JUMP"</strong> to fly!</p>
+            <button onclick="init()">START GAME</button>
+        </div>
+        <div id="player"></div>
+    </div>
+
+    <script>
+        const p = document.getElementById('player'), s = document.getElementById('stage'), m = document.getElementById('menu'), sb = document.getElementById('score');
+        let y = 180, v = 0, score = 0, live = false, pipes = [];
+
+        function init() {
+            m.style.display = 'none';
+            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Rec) return alert("Use Chrome!");
+            const r = new Rec(); r.continuous = true;
+            r.onresult = () => { if (live) v = -5.5; };
+            r.onend = () => { if (live) r.start(); };
+            r.start();
+            
+            live = true; y = 180; v = 0; score = 0; sb.innerText = 0;
+            pipes.forEach(pair => pair.forEach(pipe => pipe.remove()));
+            pipes = [];
+            
+            loop();
+            setInterval(spawn, 2000);
+        }
+
+        function spawn() {
+            if (!live) return;
+            const gap = 120, h = Math.floor(Math.random() * 180) + 30;
+            const top = Object.assign(document.createElement('div'), { className: 'pipe', style: `height:${h}px; top:0; left:400px;` });
+            const bot = Object.assign(document.createElement('div'), { className: 'pipe', style: `height:${400-gap-h}px; bottom:0; left:400px;` });
+            s.appendChild(top); s.appendChild(bot);
+            pipes.push([top, bot, false]);
+        }
+
+        function loop() {
+            if (!live) return;
+            v += 0.25; y += v;
+            p.style.top = y + 'px';
+
+            if (y < 0 || y > 375) return gameOver();
+
+            const pr = p.getBoundingClientRect();
+            pipes.forEach((pair, idx) => {
+                let x = parseFloat(pair[0].style.left) - 3;
+                pair[0].style.left = pair[1].style.left = x + 'px';
+
+                if (x < -50) {
+                    pair[0].remove(); pair[1].remove();
+                    pipes.splice(idx, 1);
+                }
+
+                if (!pair[2] && x < 50) { pair[2] = true; sb.innerText = ++score; }
+
+                const t = pair[0].getBoundingClientRect(), b = pair[1].getBoundingClientRect();
+                if ((pr.right > t.left && pr.left < t.right && pr.top < t.bottom) || 
+                    (pr.right > b.left && pr.left < b.right && pr.bottom > b.top)) gameOver();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver() {
+            live = false;
+            m.innerHTML = `<h3>Game Over! Score: ${score}</h3><button onclick="location.reload()">RESTART</button>`;
+            m.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
