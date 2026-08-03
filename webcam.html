@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 Aero-Cam Matrix Sandbox</title>
+    <style>
+        body {
+            background-color: #0f1115;
+            color: #8bac0f;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            text-shadow: 0 0 10px rgba(139, 172, 15, 0.4);
+        }
+
+        p {
+            color: #306230;
+            margin: 0 0 20px 0;
+            font-weight: bold;
+        }
+
+        /* The visual retro screen layout container */
+        .screen-frame {
+            border: 16px solid #306230;
+            border-radius: 10px;
+            background-color: #9bbc0f;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            background-color: #9bbc0f;
+            display: block;
+            /* Mirrors the canvas layout so it feels natural like a mirror */
+            transform: scaleX(-1); 
+        }
+
+        /* Hidden video track container used purely for structural data collection */
+        video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AERO-CAM MATRIX</h1>
+    <p>RETRO 4-BIT PIXEL CAMERA ENGINE</p>
+
+    <div class="screen-frame">
+        <!-- Visual target array -->
+        <canvas id="sandbox" width="400" height="300"></canvas>
+    </div>
+
+    <!-- Hidden source hardware element -->
+    <video id="webcam" autoplay playsinline></video>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('sandbox');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // Game Boy Color Palette Hex Values Matrix
+        const palette = [,     // Darkest Green,     // Dark Green,   // Light Green
+            [155, 188, 15]    // Lightest Green
+        ];
+
+        // 🎥 Request Stream Hookup
+        navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } })
+            .then(stream => {
+                video.srcObject = stream;
+                // Launch calculations loop once data streams through the layout
+                video.addEventListener('loadeddata', processFrame);
+            })
+            .catch(err => {
+                alert("❌ Webcam Access Denied! Please check permissions and run via a local server layout.");
+                console.error(err);
+            });
+
+        // 🧠 Real-time Pixel Down-sampler Loop
+        function processFrame() {
+            if (video.paused || video.ended) return;
+
+            // 1. Draw raw hardware frames straight onto our memory matrix coordinates
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 2. Extract raw layout pixel configurations (RGBA values Array)
+            const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = frameData.data;
+
+            // 3. Pixel Manipulation Step Intervals (Skip pixels for blocky mosaic look)
+            const sampleSize = 4; 
+
+            for (let y = 0; y < canvas.height; y += sampleSize) {
+                for (let x = 0; x < canvas.width; x += sampleSize) {
+                    
+                    // Calculate array index coordinate
+                    const i = (y * canvas.width + x) * 4;
+                    const r = pixels[i];
+                    const g = pixels[i + 1];
+                    const b = pixels[i + 2];
+
+                    // Convert colors to generic grayscale luminance metric
+                    const brightness = (r + g + b) / 3;
+
+                    // Map brightness to one of the 4 retro Game Boy shades
+                    let colorIndex = 3;
+                    if (brightness < 64) colorIndex = 0;
+                    else if (brightness < 128) colorIndex = 1;
+                    else if (brightness < 192) colorIndex = 2;
+
+                    const chosenColor = palette[colorIndex];
+
+                    // Overwrite memory matrix pixel colors inside the sample block layout
+                    ctx.fillStyle = `rgb(${chosenColor[0]}, ${chosenColor[1]}, ${chosenColor[2]})`;
+                    ctx.fillRect(x, y, sampleSize, sampleSize);
+                }
+            }
+
+            // Loop continuously matching hardware monitor refresh speeds
+            requestAnimationFrame(processFrame);
+        }
+    </script>
+
+</body>
+</html>
