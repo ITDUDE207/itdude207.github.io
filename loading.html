@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>⏳ Loading...</title>
+    <style>
+        body { background: #0a0a10; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        #box { width: 400px; background: #11111a; border: 2px solid #333; padding: 30px; border-radius: 8px; box-shadow: 0 10px 30px #000; }
+        progress { width: 100%; height: 20px; accent-color: #00f3ff; margin: 20px 0; }
+        .btn { background: #222; color: #00f3ff; border: 1px solid #444; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit; margin: 5px; }
+        .btn:hover { background: #00f3ff; color: #000; box-shadow: 0 0 10px #00f3ff; }
+        #status { color: #aaa; font-size: 0.9rem; min-height: 35px; }
+    </style>
+</head>
+<body>
+
+    <div id="box">
+        <h3 style="margin: 0 0 5px 0; color: #00f3ff;">CRITICAL SYSTEM UPDATE</h3>
+        <div id="status">Initializing data packet streams...</div>
+        
+        <progress id="pbar" value="0" max="100"></progress>
+        
+        <div style="font-size: 1.1rem; margin-bottom: 15px;">SPEED: <span id="sp">1.0</span>x</div>
+        <button class="btn" onclick="upgrade()">BUY MORE RAM (-5 Pts)</button>
+        <h4 style="margin: 10px 0 0 0; color: #ffd700;">POINTS: <span id="pts">0</span></h4>
+    </div>
+
+    <script>
+        const pbar = document.getElementById('pbar'), status = document.getElementById('status'), spText = document.getElementById('sp'), ptsText = document.getElementById('pts');
+        let val = 0, speed = 0.15, points = 0, interval = null;
+
+        const dynamicErrors = [
+            { pct: 99, reset: 30, txt: "❌ Server spilled coffee over data grid. Re-routing data packets..." },
+            { pct: 95, reset: 50, txt: "❌ Windows Update forced an unexpected thread kill. Reverting layouts..." },
+            { pct: 88, reset: 12, txt: "❌ Cloud server entered an existential crisis. Cleaning memory caches..." },
+            { pct: 75, reset: 60, txt: "❌ WiFi signal intercepted by a passing micro-drone. Signal degraded..." }
+        ];
+
+        function loop() {
+            val += speed;
+            pbar.value = val;
+            status.innerText = `Downloading kernel chunks... ${Math.floor(val)}%`;
+
+            // Check if we hit a chaotic threshold trap
+            let trap = dynamicErrors.find(e => Math.floor(val) === e.pct);
+            if (trap) {
+                val = trap.reset;
+                status.innerText = trap.txt;
+                points += 10; // Compensate with funny pity points
+                ptsText.innerText = points;
+                speed = 0.15; // Reset their paid speed multiplier back to base
+                spText.innerText = speed.toFixed(2);
+                alert(trap.txt);
+            }
+
+            // The impossible 100% check loop
+            if (val >= 100) {
+                alert("🏆 IMPOSSIBLE! The system actually updated!");
+                location.reload();
+            }
+        }
+
+        function upgrade() {
+            if (points >= 5) {
+                points -= 5;
+                speed += 0.2;
+                ptsText.innerText = points;
+                spText.innerText = speed.toFixed(2);
+                status.innerText = "🚀 RAM upgraded! Ticking engine acceleration speeds up.";
+            } else {
+                status.innerText = "❌ Insufficient points! Wait for a network server crash to gain points.";
+            }
+        }
+
+        // Kick off the loading simulation engine loop instantly
+        interval = setInterval(loop, 80);
+    </script>
+</body>
+</html>
