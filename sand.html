@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>⏳ Text Sand</title>
+    <style>
+        body { background: #0d0d13; color: #ffd700; font-family: monospace; text-align: center; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin:0; }
+        pre { background: #0a0a0f; border: 2px solid #333; padding: 10px; line-height: 8px; font-size: 8px; cursor: crosshair; user-select: none; box-shadow: 0 10px 30px #000; }
+        p { color: #888; font-size: 0.9rem; margin: 0 0 15px 0; }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin:0 0 5px 0;">TEXT SANDBOX</h2>
+    <p>Click and drag your mouse inside the black frame to pour sand</p>
+    <pre id="matrix"></pre>
+
+    <script>
+        const el = document.getElementById('matrix'), W = 50, H = 40;
+        let grid = Array(H).fill().map(() => Array(W).fill(' ')), active = false;
+
+        // Render loop: flattens 2D text matrix array configuration into the layout block
+        function draw() {
+            el.innerText = grid.map(row => row.join('')).join('\n');
+        }
+
+        // 🧠 Core Cellular Automata Physics Engine Loop
+        function physics() {
+            // Scan array backwards from bottom-to-top to avoid sand moving twice per frame step
+            for (let y = H - 2; y >= 0; y--) {
+                for (let x = 0; x < W; x++) {
+                    if (grid[y][x] === 'o') {
+                        // 1. Direct vertical fall check
+                        if (grid[y + 1][x] === ' ') {
+                            grid[y + 1][x] = 'o'; grid[y][x] = ' ';
+                        } 
+                        // 2. Slanted slide down check (Tumbles randomly left or right if blocked)
+                        else {
+                            let dir = Math.random() < 0.5 ? -1 : 1;
+                            if (x + dir >= 0 && x + dir < W && grid[y + 1][x + dir] === ' ') {
+                                grid[y + 1][x + dir] = 'o'; grid[y][x] = ' ';
+                            } else if (x - dir >= 0 && x - dir < W && grid[y + 1][x - dir] === ' ') {
+                                grid[y + 1][x - dir] = 'o'; grid[y][x] = ' ';
+                            }
+                        }
+                    }
+                }
+            }
+            draw();
+            requestAnimationFrame(physics);
+        }
+
+        // 🖱️ Mouse Coordinate Mapping Systems
+        function addSand(e) {
+            const rect = el.getBoundingClientRect();
+            // Translate physical pixel click targets into matrix row/column array indices
+            const x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
+            const y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
+            
+            if (x >= 0 && x < W && y >= 0 && y < H) {
+                grid[y][x] = 'o';
+                // Add a small splash cluster layer around the point for a better flow feel
+                if (x + 1 < W) grid[y][x + 1] = Math.random() < 0.4 ? 'o' : grid[y][x + 1];
+                if (x - 1 >= 0) grid[y][x - 1] = Math.random() < 0.4 ? 'o' : grid[y][x - 1];
+            }
+        }
+
+        el.addEventListener('mousedown', (e) => { active = true; addSand(e); });
+        window.addEventListener('mouseup', () => active = false);
+        el.addEventListener('mousemove', (e) => { if (active) addSand(e); });
+
+        // Kick off engine loops instantly
+        physics();
+    </script>
+</body>
+</html>
