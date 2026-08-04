@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🧶 String Weave</title>
+    <style>
+        body { background: #07070c; color: #ff00ff; font-family: monospace; text-align: center; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        canvas { background: #020205; border: 2px solid #222; cursor: crosshair; box-shadow: 0 10px 30px #000; }
+        p { color: #555; margin: 0 0 15px 0; }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin:0 0 5px 0; text-shadow: 0 0 10px #ff00ff;">NEON STRING WEAVER</h2>
+    <p>Click and drag paths between the outer pin nodes to construct string geometries</p>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        const pins = [], threads = [], NUM_PINS = 30, CENTER = 250, RADIUS = 210;
+        let activePin = null, mx = 0, my = 0;
+
+        // 🏗️ Arrange Anchor Pin Coordinates in a perfect structural ring layout
+        for (let i = 0; i < NUM_PINS; i++) {
+            let angle = (i / NUM_PINS) * Math.PI * 2;
+            pins.push({
+                x: CENTER + Math.cos(angle) * RADIUS,
+                y: CENTER + Math.sin(angle) * RADIUS,
+                id: i
+            });
+        }
+
+        // 🎨 Graphic Vector Composite Rendering Engine Loop
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Activate Hardware Additive Blending Layer Modes
+            ctx.globalCompositeOperation = 'screen';
+            ctx.lineWidth = 1.5;
+
+            // 2. Map existing active text thread arrays onto canvas lines
+            threads.forEach(t => {
+                // Generates a shifting rainbow palette track gradient depending on connected pin layout index steps
+                let hue = (t.p0.id * 12) % 360;
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.45)`;
+                ctx.shadowBlur = 4; ctx.shadowColor = ctx.strokeStyle;
+                
+                ctx.beginPath();
+                ctx.moveTo(t.p0.x, t.p0.y);
+                ctx.lineTo(t.p1.x, t.p1.y);
+                ctx.stroke();
+            });
+
+            // 3. Render active real-time drag target pointer vectors
+            if (activePin) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.moveTo(activePin.x, activePin.y); ctx.lineTo(mx, my); ctx.stroke();
+            }
+
+            // 4. Reset layout composition state to safely overlay boundary anchor nodes
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.shadowBlur = 0;
+            pins.forEach(p => {
+                let hover = activePin === p || Math.hypot(p.x - mx, p.y - my) < 12;
+                ctx.fillStyle = hover ? '#ff00ff' : '#333';
+                ctx.beginPath(); ctx.arc(p.x, p.y, hover ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+            });
+
+            requestAnimationFrame(render);
+        }
+
+        // 🖱️ Geometric Node Interaction Trackers
+        function getClosestPin(e) {
+            const rect = canvas.getBoundingClientRect();
+            mx = e.clientX - rect.left;
+            my = e.clientY - rect.top;
+            return pins.find(p => Math.hypot(p.x - mx, p.y - my) < 15) || null;
+        }
+
+        canvas.addEventListener('mousedown', (e) => { activePin = getClosestPin(e); });
+        canvas.addEventListener('mousemove', (e) => { getClosestPin(e); });
+        
+        window.addEventListener('mouseup', (e) => {
+            if (activePin) {
+                let targetPin = getClosestPin(e);
+                // Secure thread attachment loops between differing coordinate frames
+                if (targetPin && targetPin !== activePin) {
+                    threads.push({ p0: activePin, p1: targetPin });
+                }
+                activePin = null;
+            }
+        });
+
+        // Fire execution loops instantly
+        render();
+    </script>
+</body>
+</html>
