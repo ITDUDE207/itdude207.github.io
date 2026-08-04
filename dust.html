@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>✨ Screen Dust</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #06060a; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let pts = [], mx = -1000, my = -1000, W, H;
+
+        // 📐 Dynamic Viewport Resizing System
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            pts = [];
+            // Generate a dense screen matrix of home coordinate dust nodes
+            const spacing = 35; 
+            for (let y = spacing; y < H; y += spacing) {
+                for (let x = spacing; x < W; x += spacing) {
+                    pts.push({ x: x, y: y, hx: x, hy: y, vx: 0, vy: 0 });
+                }
+            }
+        }
+
+        // 🧠 High-Performance Kinetic Vector Loop
+        function loop() {
+            ctx.fillStyle = 'rgba(6, 6, 10, 0.25)'; // Smooth trails ghosting effect
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.75)';
+
+            pts.forEach(p => {
+                // 1. Calculate distance gap vectors against cursor placements
+                let dx = mx - p.x, dy = my - p.y;
+                let dist = Math.hypot(dx, dy);
+
+                // 2. Wind Tunnel Repulsion: Blow particles away if mouse gets close
+                if (dist < 100) {
+                    let force = (100 - dist) * 0.12;
+                    let angle = Math.atan2(dy, dx);
+                    p.vx -= Math.cos(angle) * force;
+                    p.vy -= Math.sin(angle) * force;
+                }
+
+                // 3. Elastic Springback: Gravity attraction pull back to home grid node coordinates
+                p.vx += (p.hx - p.x) * 0.04;
+                p.vy += (p.hy - p.y) * 0.04;
+
+                // 4. Momentum dampening scalars
+                p.vx *= 0.88; p.vy *= 0.88;
+                p.x += p.vx; p.y += p.vy;
+
+                // Render tiny pixel dots onto the buffer layout mesh
+                ctx.fillRect(p.x, p.y, 2, 2);
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        // 🖱️ Global Coordinate Intercept Arrays
+        window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+        window.addEventListener('mouseout', () => { mx = -1000; my = -1000; }); // Reset off-screen if cursor leaves window
+        window.addEventListener('resize', resize);
+
+        // Execute setups instantly
+        resize();
+        loop();
+    </script>
+</body>
+</html>
