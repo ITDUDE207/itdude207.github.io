@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🧬 Game of Life</title>
+    <style>
+        body { background: #0d0d13; color: #00ff66; font-family: monospace; text-align: center; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        canvas { background: #050508; border: 2px solid #222; cursor: crosshair; box-shadow: 0 10px 30px #000; }
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
+        .btn { background: #12121a; color: #00ff66; border: 1px solid #00ff66; padding: 8px 16px; font-weight: bold; cursor: pointer; font-family: inherit; border-radius: 4px; }
+        .btn:hover { background: #00ff66; color: #000; box-shadow: 0 0 10px #00ff66; }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin:0 0 5px 0;">CELLULAR LIFE SIMULATOR</h2>
+    <p style="color: #666; margin: 0 0 15px 0;">Click/drag to draw cells. Press Start to run simulation rules.</p>
+
+    <canvas id="grid" width="400" height="400"></canvas>
+
+    <div class="controls">
+        <button class="btn" id="run-btn" onclick="toggle()">START</button>
+        <button class="btn" onclick="clearGrid()">WIPE</button>
+        <button class="btn" onclick="randomize()">RANDOM</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('grid'), ctx = canvas.getContext('2d');
+        const RES = 8, W = canvas.width / RES, H = canvas.height / RES;
+        let grid = Array(H).fill().map(() => Array(W).fill(0)), run = false, drawing = false;
+
+        // Render loop: draws array bits as canvas coordinate blocks
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    if (grid[y][x]) {
+                        ctx.fillStyle = '#00ff66';
+                        ctx.fillRect(x * RES, y * RES, RES - 1, RES - 1);
+                    }
+                }
+            }
+        }
+
+        // 🧠 The 3 Evolutionary Rules Game Loop
+        function step() {
+            if (!run) return;
+            let next = grid.map(arr => [...arr]);
+
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    // Count all 8 surrounding neighbor cells wrapper coordinates
+                    let neighbors = 0;
+                    for (let i = -1; i < 2; i++) {
+                        for (let j = -1; j < 2; j++) {
+                            if (i === 0 && j === 0) continue;
+                            // The % math creates a toroidal loop so cells wrap around screen edges smoothly
+                            let ny = (y + i + H) % H, nx = (x + j + W) % W;
+                            neighbors += grid[ny][nx];
+                        }
+                    }
+
+                    // Rule check: 2-3 neighbours survives, 3 breeds an empty space, else dies
+                    if (grid[y][x] && (neighbors < 2 || neighbors > 3)) next[y][x] = 0;
+                    else if (!grid[y][x] && neighbors === 3) next[y][x] = 1;
+                }
+            }
+            grid = next;
+            draw();
+            setTimeout(() => requestAnimationFrame(step), 60); // Controlled speed tick interval
+        }
+
+        // 🖱️ Interaction Matrix Vector Hooks
+        function addCell(e) {
+            const r = canvas.getBoundingClientRect();
+            const x = Math.floor(((e.clientX - r.left) / r.width) * W);
+            const y = Math.floor(((e.clientY - r.top) / r.height) * H);
+            if (x >= 0 && x < W && y >= 0 && y < H) {
+                grid[y][x] = 1;
+                draw();
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => { drawing = true; addCell(e); });
+        window.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mousemove', (e) => { if (drawing) addCell(e); });
+
+        function toggle() {
+            run = !run;
+            document.getElementById('run-btn').innerText = run ? 'PAUSE' : 'START';
+            if (run) step();
+        }
+
+        function clearGrid() { run = false; document.getElementById('run-btn').innerText = 'START'; grid = Array(H).fill().map(() => Array(W).fill(0)); draw(); }
+        function randomize() { grid = Array(H).fill().map(() => Array(W).fill(0).map(() => Math.random() > 0.85 ? 1 : 0)); draw(); }
+
+        // Start initialized flat layout view
+        draw();
+    </script>
+</body>
+</html>
