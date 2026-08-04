@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📈 Ghost Markets</title>
+    <style>
+        body { background: #08080c; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        #board { width: 360px; background: #11111a; border: 2px solid #222; padding: 20px; border-radius: 8px; box-shadow: 0 10px 30px #000; }
+        .row { display: flex; justify-content: space-between; padding: 15px; margin: 8px 0; background: #161622; border-radius: 4px; font-weight: bold; cursor: crosshair; transition: background 0.2s; }
+        .row:hover { background: #221118; }
+        .up { color: #00ff66; }
+        .down { color: #ff3366; }
+    </style>
+</head>
+<body>
+
+    <div id="board">
+        <h3 style="color: #00f3ff; margin: 0 0 5px 0;">QUANTUM CRYPTO TICKER</h3>
+        <p style="color: #666; margin: 0 0 20px 0; font-size: 0.85rem;">Market tracking metrics fluctuate based on direct cursor observation.</p>
+        
+        <div class="row" onmouseenter="panic(this, true)" onmouseleave="panic(this, false)">
+            <span>🪙 PANIC COIN (PNK)</span>
+            <span class="up">$12,450.00</span>
+        </div>
+        <div class="row" onmouseenter="panic(this, true)" onmouseleave="panic(this, false)">
+            <span>👻 GHOST CASH (GHS)</span>
+            <span class="up">$89.42</span>
+        </div>
+        <div class="row" onmouseenter="panic(this, true)" onmouseleave="panic(this, false)">
+            <span>📉 SHY TOKEN (SHY)</span>
+            <span class="up">$1.24</span>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+
+        function beep(freq) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.value = freq;
+                g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.08);
+            } catch(e) {}
+        }
+
+        function panic(row, isObserved) {
+            const priceNode = row.children[1];
+            
+            if (isObserved) {
+                // 📉 Direct layout interaction triggers panic crash metrics
+                beep(150);
+                priceNode.className = "down";
+                priceNode.innerText = "💥 CRASHING (-99.4%)";
+            } else {
+                // 📈 Moving pointer completely away triggers automated shadow inflation loops
+                beep(600);
+                priceNode.className = "up";
+                
+                // Generate a fake, massively over-inflated value out of thin air
+                let fakeProfit = (Math.random() * 50000 + 100).toFixed(2);
+                priceNode.innerText = `+$${fakeProfit} (🚀 MOON)`;
+            }
+        }
+    </script>
+</body>
+</html>
