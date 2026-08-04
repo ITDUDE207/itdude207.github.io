@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🛒 Checkout Hell</title>
+    <style>
+        body { background: #0a0a0f; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        #cart { width: 360px; background: #12121a; border: 2px solid #333; padding: 25px; border-radius: 8px; box-shadow: 0 10px 30px #000; }
+        dialog { background: #1a1a26; color: #fff; border: 3px solid #ff3366; border-radius: 8px; padding: 20px; width: 320px; text-align: center; box-shadow: 0 0 25px #ff3366; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
+        .btn { background: #00ff66; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit; margin: 5px; width: 80%; }
+        .btn-no { background: #ff3366; color: #fff; }
+        .btn:hover { opacity: 0.9; transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+    <div id="cart">
+        <h3 style="color: #00f3ff; margin: 0 0 10px 0;">SHOPPING CART</h3>
+        <p style="text-align: left; margin: 5px 0;">📦 1x Digital Cat Sticker ... $0.99</p>
+        <hr style="border-color: #333; margin: 15px 0;">
+        <h4 style="margin: 0 0 15px 0; text-align: right;">TOTAL: <span id="total">$0.99</span></h4>
+        <button class="btn" onclick="nextUpsell()">PROCEED TO CHECKOUT</button>
+    </div>
+
+    <!-- NATIVE POP-UP CONTAINER FRAME -->
+    <dialog id="box">
+        <h3 id="title" style="color: #ff3366; margin: 0 0 10px 0;">PREMIUM OFFER</h3>
+        <p id="desc" style="font-size: 0.95rem; line-height: 1.4; margin-bottom: 20px;"></p>
+        <button class="btn" onclick="acceptUpsell()">YES, ADD TO CART</button>
+        <button class="btn btn-no" onclick="nextUpsell()">NO, THANK YOU</button>
+    </dialog>
+
+    <script>
+        const box = document.getElementById('box'), title = document.getElementById('title'), desc = document.getElementById('desc'), totalText = document.getElementById('total');
+        let currentIdx = -1, finalPrice = 0.99, audioCtx = null;
+
+        // 📋 THE CASCADE UPSALE PROTOCOL DATA MATRIX
+        const upsells = [
+            { t: "🛡️ DEBRIS PROTECTION", d: "Protect your digital sticker against solar flares and cosmic electromagnetic interference? (+ $49.99)", p: 49.99 },
+            { t: "🌱 ECO-PIXELS", d: "Upgrade to premium carbon-neutral, organic green pixels harvested ethically by hand? (+ $12.50)", p: 12.50 },
+            { t: "🚨 ARE YOU SURE?", d: "Rejecting our premium pixels will make your cat sticker look slightly sadder. Are you completely sure?", p: 0, forceNext: true },
+            { t: "⏳ HIGH-SPEED ROUTING", d: "Prioritise your checkout data packets so your sticker downloads 0.04 seconds faster? (+ $5.99)", p: 5.99 },
+            { t: "📜 EXTENDED CONTRACT", d: "Unlock our 99-year warranty layout in case the file corrupts in the next century? (+ $119.00)", p: 119.00 },
+            { t: "🐱 CAT MEOW SYNTH", d: "Inject an embedded audio module that plays a loud robotic meow sound every time you view the file? (+ $8.99)", p: 8.99 }
+        ];
+
+        function playBeep(freq) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'square'; o.frequency.value = freq;
+                g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.15);
+            } catch(e) {}
+        }
+
+        function nextUpsell() {
+            currentIdx++;
+            playBeep(250);
+
+            // Checkout Loop complete handler
+            if (currentIdx >= upsells.length) {
+                box.close();
+                alert(`🏆 CONGRATULATIONS!\nYou survived checkout hell.\nYour final card balance total is: $${finalPrice.toFixed(2)}`);
+                location.reload();
+                return;
+            }
+
+            // Load next visual card parameters into native dialog matrix layout
+            const data = upsells[currentIdx];
+            title.innerText = data.t;
+            desc.innerText = data.d;
+            
+            // If it's a guilt-trip card, strip the cash addition value
+            box.showModal();
+        }
+
+        function acceptUpsell() {
+            const data = upsells[currentIdx];
+            if (data && data.p > 0) {
+                finalPrice += data.p;
+                totalText.innerText = `$${finalPrice.toFixed(2)}`;
+                playBeep(600);
+            }
+            nextUpsell();
+        }
+    </script>
+</body>
+</html>
