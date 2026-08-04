@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🗣️ Critique Box</title>
+    <style>
+        body { background: #0c0c12; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        #box { width: 400px; background: #12121a; border: 2px solid #333; padding: 25px; border-radius: 8px; box-shadow: 0 10px 30px #000; }
+        input { width: 100%; padding: 12px; background: #07070a; border: 1px solid #444; color: #00ff66; font-family: inherit; font-size: 1.1rem; box-sizing: border-box; outline: none; border-radius: 4px; }
+        input:focus { border-color: #00ff66; }
+        #msg { color: #ff3366; font-weight: bold; margin-top: 20px; min-height: 40px; font-size: 0.95rem; line-height: 1.4; }
+        .win { color: #00ff66 !important; text-shadow: 0 0 10px #00ff66; }
+    </style>
+</head>
+<body>
+
+    <div id="box">
+        <h3 style="margin: 0 0 5px 0; color: #00f3ff;">SECURITY PROTOCOL</h3>
+        <p style="color: #666; margin: 0 0 20px 0; font-size: 0.85rem;">Type a genuine, heartwarming compliment to proceed.</p>
+        
+        <input type="text" id="inp" placeholder="Type something nice..." autocomplete="off">
+        <div id="msg">Awaiting input...</div>
+    </div>
+
+    <script>
+        const inp = document.getElementById('inp'), msg = document.getElementById('msg');
+        let lastTime = 0, slowTicks = 0, completed = false;
+
+        inp.addEventListener('input', () => {
+            if (completed) return;
+            const val = inp.value, now = performance.now();
+            
+            // Track time gaps between keystrokes to detect hesitation
+            if (lastTime > 0 && (now - lastTime) > 700) slowTicks++;
+            lastTime = now;
+
+            // 📋 Validation Critiques Rule Tree
+            if (val.length < 5) {
+                msg.innerText = "Is that it? A bit lazy, don't you think?";
+            } else if (val.toLowerCase() === val) {
+                msg.innerText = "All lowercase letters? You sound incredibly bored.";
+            } else if (!val.includes('!')) {
+                msg.innerText = "Lacks an exclamation mark. Where is the passion?!";
+            } else if (slowTicks > 2) {
+                msg.innerText = "You are typing way too slowly. You're just making this up.";
+                if (val.length > 25) slowTicks = 0; // Mercy reset if they keep writing
+            } else if (val.toUpperCase() === val) {
+                msg.innerText = "Whoa, stop yelling at me! Calm down.";
+            } else if (val.length < 25) {
+                msg.innerText = `Only ${val.length} characters? True kindness requires elaboration.`;
+            } else {
+                // Milestone unlocked
+                completed = true;
+                inp.disabled = true;
+                msg.className = "win";
+                msg.innerText = "🎉 VALIDATION ACCEPTED! (Though it felt slightly forced.)";
+            }
+        });
+    </script>
+</body>
+</html>
