@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🪢 Rope Physics</title>
+    <style>
+        body { background: #0d0d13; color: #00f3ff; font-family: monospace; text-align: center; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        canvas { background: #050508; border: 2px solid #222; cursor: grab; box-shadow: 0 10px 30px #000; }
+        p { color: #666; margin: 0 0 15px 0; }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin:0 0 5px 0;">ROPE VERLET PHYSICS</h2>
+    <p>Click and drag any part of the rope to stretch and swing it</p>
+
+    <canvas id="canvas" width="600" height="450"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        const points = [], sticks = [], NUM_PTS = 20, SEG_LEN = 18, GRAVITY = 0.35, FRICTION = 0.99;
+        let dragPt = null;
+
+        // 🏗️ Build Rope Link Array Mesh Coordinates
+        for (let i = 0; i < NUM_PTS; i++) {
+            points.push({ x: 300 + i * SEG_LEN, y: 50, oldX: 300 + i * SEG_LEN, oldY: 50, pinned: i === 0 });
+            if (i > 0) sticks.push({ p0: points[i - 1], p1: points[i] });
+        }
+
+        // 🧠 Verlet Integration Physics & Elastic Constraints Engine
+        function update() {
+            // 1. Position tracking shifts via velocity memory arrays
+            points.forEach(p => {
+                if (p.pinned) return;
+                let vx = (p.x - p.oldX) * FRICTION;
+                let vy = (p.y - p.oldY) * FRICTION;
+                p.oldX = p.x; p.oldY = p.y;
+                p.x += vx; p.y += vy + GRAVITY; // Inject gravity vector
+            });
+
+            // 2. Structural constraint relaxation loops (handles segment elasticity matches)
+            for (let r = 0; r < 5; r++) { // Repeating checks sharpens rope rigidity
+                sticks.forEach(s => {
+                    let dx = s.p1.x - s.p0.x, dy = s.p1.y - s.p0.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    let diff = SEG_LEN - dist;
+                    let percent = (diff / dist) / 2;
+                    let offsetX = dx * percent, offsetY = dy * percent;
+
+                    if (!s.p0.pinned) { s.p0.x -= offsetX; s.p0.y -= offsetY; }
+                    if (!s.p1.pinned) { s.p1.x += offsetX; s.p1.y += offsetY; }
+                });
+            }
+
+            // Render output matrix view
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#00f3ff'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00f3ff';
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            sticks.forEach(s => ctx.lineTo(s.p1.x, s.p1.y));
+            ctx.stroke();
+
+            // Reset glow context shadows to prevent lag on point highlights
+            ctx.shadowBlur = 0;
+            points.forEach(p => {
+                ctx.fillStyle = p.pinned ? '#ff0055' : '#fff';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.pinned ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        // 🖱️ Interaction Vector Targeting
+        canvas.addEventListener('mousedown', (e) => {
+            const r = canvas.getBoundingClientRect();
+            let mx = e.clientX - r.left, my = e.clientY - r.top;
+            
+            // Scan for closest node point target
+            points.forEach(p => {
+                let dx = p.x - mx, dy = p.y - my;
+                if (Math.sqrt(dx * dx + dy * dy) < 20) { dragPt = p; canvas.style.cursor = 'grabbing'; }
+            });
+        });
+
+        window.addEventListener('mouseup', () => { dragPt = null; canvas.style.cursor = 'grab'; });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragPt) return;
+            const r = canvas.getBoundingClientRect();
+            dragPt.x = e.clientX - r.left;
+            dragPt.y = e.clientY - r.top;
+        });
+
+        // Initialize loops
+        update();
+    </script>
+</body>
+</html>
