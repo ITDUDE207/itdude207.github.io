@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>✨ Hyper Screen Dust</title>
+    <meta charset="UTF-8">
+    <title>✨ Hyper Screen Dust Matrix</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #06060a; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #040406; }
         canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
     </style>
 </head>
@@ -15,66 +16,75 @@
         const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
         let pts = [], mx = -1000, my = -1000, W, H;
 
-        // 📐 Dynamic Viewport Resizing & Hyper-Density Node System
+        // 📐 Dynamic Viewport Grid Scaler - Massive 55,000+ Point Cloud
         function resize() {
             W = canvas.width = window.innerWidth;
             H = canvas.height = window.innerHeight;
             pts = [];
             
-            // Reduced spacing to 9px to pack over 10,000 additional dots onto the screen grid matrix
-            const spacing = 9; 
-            for (let y = spacing; y < H; y += spacing) {
-                for (let x = spacing; x < W; x += spacing) {
-                    pts.push({ x: x, y: y, hx: x, hy: y, vx: 0, vy: 0 });
+            // Tight 4px layout coordinates map maximum density onto the viewport mesh
+            const spacingX = 4; 
+            const spacingY = 5; 
+            
+            for (let y = spacingY; y < H; y += spacingY) {
+                // Staggering every second row breaks the lines up for a cosmic fluid look
+                let shift = (Math.floor(y / spacingY) % 2) * (spacingX / 2);
+                for (let x = spacingX; x < W; x += spacingX) {
+                    let rx = x + shift;
+                    pts.push({ x: rx, y: y, hx: rx, hy: y, vx: 0, vy: 0 });
                 }
             }
         }
 
-        // 🧠 High-Performance Kinetic Vector Loop
+        // 🧠 High-Performance Squared-Distance Vector Loop
         function loop() {
-            // Optimized frame wipe handles thousands of particle arrays without stuttering
-            ctx.fillStyle = 'rgba(6, 6, 10, 0.25)'; 
+            // Semi-transparent overlay handles thousands of dots with fluid trailing paths
+            ctx.fillStyle = 'rgba(4, 4, 6, 0.28)'; 
             ctx.fillRect(0, 0, W, H);
             
-            ctx.fillStyle = 'rgba(0, 243, 255, 0.65)';
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.7)';
+
+            // Performance Fix: Avoid using heavy square-roots inside a 50k iteration loop
+            const radius = 70;
+            const radiusSq = radius * radius; 
 
             for (let i = 0; i < pts.length; i++) {
                 const p = pts[i];
                 
-                // 1. Calculate distance gap vectors against cursor placements
                 let dx = mx - p.x;
                 let dy = my - p.y;
-                let dist = Math.hypot(dx, dy);
+                let distSq = dx * dx + dy * dy; // Raw squared distance vector mapping
 
-                // 2. Wind Tunnel Repulsion: Blow particles away if mouse gets close
-                if (dist < 80) {
-                    let force = (80 - dist) * 0.15;
+                // 1. Wind Tunnel Outward Repel Mechanics
+                if (distSq < radiusSq && distSq > 0) {
+                    let dist = Math.sqrt(distSq); 
+                    let force = (radius - dist) * 0.18; // Blast velocity intensity scalar
                     let angle = Math.atan2(dy, dx);
                     p.vx -= Math.cos(angle) * force;
                     p.vy -= Math.sin(angle) * force;
                 }
 
-                // 3. Elastic Springback: Gravity attraction pull back to home grid node coordinates
-                p.vx += (p.hx - p.x) * 0.05;
-                p.vy += (p.hy - p.y) * 0.05;
+                // 2. Elastic String Springback Attraction Loops
+                p.vx += (p.hx - p.x) * 0.06;
+                p.vy += (p.hy - p.y) * 0.06;
 
-                // 4. Momentum dampening scalars
-                p.vx *= 0.85; p.vy *= 0.85;
+                // 3. Kinetic friction dampening
+                p.vx *= 0.82; p.vy *= 0.82;
                 p.x += p.vx; p.y += p.vy;
 
-                // Render tiny pixel dots onto the buffer layout mesh
-                ctx.fillRect(p.x, p.y, 1.2, 1.2);
+                // Render micro dot segments straight onto the graphics hardware cache buffer
+                ctx.fillRect(p.x, p.y, 1, 1);
             }
 
             requestAnimationFrame(loop);
         }
 
-        // 🖱️ Global Coordinate Intercept Arrays
+        // 🖱️ Global Viewport Capture Event Lines
         window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
         window.addEventListener('mouseout', () => { mx = -1000; my = -1000; }); 
         window.addEventListener('resize', resize);
 
-        // Execute setups instantly
+        // Execute core modules
         resize();
         loop();
     </script>
