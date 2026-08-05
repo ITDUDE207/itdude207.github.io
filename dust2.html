@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>✨ Hyper Screen Dust Matrix</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #040406; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let pts = [], mx = -1000, my = -1000, W, H;
+
+        // 📐 Dynamic Viewport Grid Scaler - Optimized Smooth Array Matrix
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            pts = [];
+            
+            // Fixed performance lag patch: increased space layout variables to 8px to reduce CPU workload
+            const spacingX = 8; 
+            const spacingY = 8; 
+            
+            for (let y = spacingY; y < H; y += spacingY) {
+                let shift = (Math.floor(y / spacingY) % 2) * (spacingX / 2);
+                for (let x = spacingX; x < W; x += spacingX) {
+                    let rx = x + shift;
+                    pts.push({ x: rx, y: y, hx: rx, hy: y, vx: 0, vy: 0 });
+                }
+            }
+        }
+
+        // 🧠 High-Performance Squared-Distance Vector Loop
+        function loop() {
+            // Semi-transparent overlay handles thousands of dots with fluid trailing paths
+            ctx.fillStyle = 'rgba(4, 4, 6, 0.3)'; 
+            ctx.fillRect(0, 0, W, H);
+            
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.75)';
+
+            // Performance Fix: Avoid using heavy square-roots inside iteration loops
+            const radius = 80;
+            const radiusSq = radius * radius; 
+
+            for (let i = 0; i < pts.length; i++) {
+                const p = pts[i];
+                
+                let dx = mx - p.x;
+                let dy = my - p.y;
+                let distSq = dx * dx + dy * dy; // Raw squared distance vector mapping
+
+                // 1. Wind Tunnel Outward Repel Mechanics
+                if (distSq < radiusSq && distSq > 0) {
+                    let dist = Math.sqrt(distSq); 
+                    let force = (radius - dist) * 0.14; // Blast velocity intensity scalar
+                    let angle = Math.atan2(dy, dx);
+                    p.vx -= Math.cos(angle) * force;
+                    p.vy -= Math.sin(angle) * force;
+                }
+
+                // 2. Elastic String Springback Attraction Loops
+                p.vx += (p.hx - p.x) * 0.05;
+                p.vy += (p.hy - p.y) * 0.05;
+
+                // 3. Kinetic friction dampening
+                p.vx *= 0.84; p.vy *= 0.84;
+                p.x += p.vx; p.y += p.vy;
+
+                // Render dot segments straight onto the graphics hardware cache buffer
+                // Rendered slightly larger (1.5px) so the visual space stays completely filled
+                ctx.fillRect(p.x, p.y, 1.5, 1.5);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // 🖱️ Global Viewport Capture Event Lines
+        window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+        window.addEventListener('mouseout', () => { mx = -1000; my = -1000; }); 
+        window.addEventListener('resize', resize);
+
+        // Execute core modules
+        resize();
+        loop();
+    </script>
+</body>
+</html>
