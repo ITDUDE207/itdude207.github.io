@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔐 PIN Roast</title>
+    <style>
+        body { background: #0c0d12; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; overflow: hidden; }
+        #vault { width: 300px; background: #12121a; border: 2px solid #333; padding: 25px; border-radius: 8px; box-shadow: 0 10px 30px #000; transition: transform 0.05s; }
+        #screen { width: 100%; height: 40px; background: #07070a; border: 1px solid #444; margin-bottom: 20px; font-size: 1.5rem; line-height: 40px; color: #00ff66; letter-spacing: 5px; font-weight: bold; border-radius: 4px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .key { background: #1c1c27; color: #fff; border: 1px solid #444; padding: 15px; font-size: 1.2rem; font-weight: bold; font-family: inherit; cursor: pointer; border-radius: 4px; }
+        .key:active { background: #2a2a3a; }
+        #feedback { color: #ff3366; font-size: 0.85rem; font-weight: bold; margin-top: 20px; min-height: 35px; line-height: 1.4; }
+        @keyframes vibration { 0%{transform:translate(0,0);} 20%{transform:translate(-3px,2px);} 40%{transform:translate(3px,-2px);} 60%{transform:translate(-2px,-2px);} 80%{transform:translate(2px,2px);} }
+        .shake { animation: vibration 0.08s infinite; border-color: #ff3366 !important; }
+    </style>
+</head>
+<body>
+
+    <div id="vault">
+        <h3 style="color: #00f3ff; margin: 0 0 15px 0;">SECURE ATM CORE</h3>
+        <div id="screen"></div>
+        
+        <div class="grid">
+            <button class="key" onclick="press('1')">1</button><button class="key" onclick="press('2')">2</button><button class="key" onclick="press('3')">3</button>
+            <button class="key" onclick="press('4')">4</button><button class="key" onclick="press('5')">5</button><button class="key" onclick="press('6')">6</button>
+            <button class="key" onclick="press('7')">7</button><button class="key" onclick="press('8')">8</button><button class="key" onclick="press('9')">9</button>
+            <button class="key" style="background:#ff3366" onclick="clr()">❌</button><button class="key" onclick="press('0')">0</button><button class="key" style="background:#00ff66; color:#000;" onclick="ent()">✔️</button>
+        </div>
+        
+        <div id="feedback">Awaiting credentials...</div>
+    </div>
+
+    <script>
+        const scr = document.getElementById('screen'), fb = document.getElementById('feedback'), vault = document.getElementById('vault');
+        let pin = "", ac = null, lastTime = 0, hesitationCount = 0;
+
+        function snd(f, type='sine') {
+            try {
+                if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.04, ac.currentTime);
+                o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.1);
+            } catch(e) {}
+        }
+
+        function press(num) {
+            if (pin.length >= 4) return;
+            const now = performance.now();
+            
+            // Track latency gaps between button taps to catch user hesitation
+            if (lastTime > 0 && (now - lastTime) > 800) hesitationCount++;
+            lastTime = now;
+
+            snd(500);
+            pin += num;
+            scr.innerText = "*".repeat(pin.length);
+            fb.innerText = "Processing digit sequence...";
+            fb.style.color = "#aaa";
+        }
+
+        function clr() {
+            snd(250); pin = ""; scr.innerText = ""; hesitationCount = 0; lastTime = 0;
+            fb.innerText = "Memory cache cleared."; fb.style.color = "#ff3366";
+        }
+
+        function alarm(msg) {
+            snd(150, 'sawtooth');
+            vault.className = "shake";
+            fb.innerText = msg;
+            fb.style.color = "#ff3366";
+            setTimeout(() => vault.className = "", 400);
+        }
+
+        function ent() {
+            if (pin.length < 4) return alarm("🚨 ERROR: INCOMPLETE SEQUENCE. Vault requires 4 structural tokens.");
+
+            // 📋 JUDGMENTAL CRYPTO ROAST MATRIX
+            if (pin === "1234" || pin === "4321" || pin === "2580") {
+                alarm("🚨 PATHETIC COGNITIVE STRENGTH. That combination is actively used by over 4 million universal basic appliances.");
+            } else if (pin === "0000" || pin === "1111" || pin === "9999") {
+                alarm("🚨 ABSOLUTE LAZINESS DETECTED. You chose a pin designed for an old microwave door latch mechanism.");
+            } else if (hesitationCount > 1) {
+                alarm("❌ TRANSACTION REFUSED. You hesitated twice during entry coordination lines. You are going to forget this code by tomorrow morning.");
+                clr();
+            } else if (pin.substring(0,2) === "19" || pin.substring(0,2) === "20") {
+                alarm(`🚨 EXTREME RISK CORRELATION. Using a birth or calendar year index (${pin}) makes your assets highly susceptible to low-tier social engineering bots.`);
+            } else {
+                snd(800, 'sine');
+                fb.style.color = "#00ff66";
+                fb.innerText = "🏆 SECURE HOLD OVERRIDE GRANTED! (Though your pattern structure implied mild financial paranoia.)";
+                pin = ""; scr.innerText = "OPEN";
+            }
+        }
+    </script>
+</body>
+</html>
