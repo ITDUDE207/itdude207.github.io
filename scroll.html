@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>⚡ Scroll Tycoon</title>
+    <style>
+        body { background: #0a0a0f; color: #fff; font-family: monospace; margin: 0; padding: 0; text-align: center; }
+        /* 📜 THE INFINITE SPACE CONTAINER MESH */
+        #scroll-space { height: 50000px; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        #dashboard { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; width: 340px; background: #11111a; border: 2px solid #222; padding: 25px; border-radius: 8px; box-shadow: 0 10px 30px #000; pointer-events: auto; }
+        .btn { background: #222; color: #00f3ff; border: 1px solid #444; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit; margin: 8px 0; width: 100%; display: block; text-align: left; font-size: 0.85rem; }
+        .btn:hover { background: #00f3ff; color: #000; box-shadow: 0 0 10px #00f3ff; }
+        #energy { color: #ffd700; font-size: 2.2rem; font-weight: bold; text-shadow: 0 0 15px #ffd700; margin: 10px 0; }
+        .hud { font-size: 0.85rem; color: #888; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- Invisible huge scroll plane layout tracker -->
+    <div id="scroll-space"></div>
+
+    <!-- FIXED INSTRUMENT PANEL CONTAINER -->
+    <div id="dashboard">
+        <h3 style="color: #00f3ff; margin: 0 0 5px 0;">KINETIC GENERATOR</h3>
+        <p class="hud">Spin your mouse wheel / trackpad scroll lines to harvest raw volts.</p>
+        
+        <div id="energy">0V</div>
+        <div class="hud" style="color:#00ff66;">GENERATION METER: +<span id="mult">1</span>V / scroll</div>
+
+        <button class="btn" onclick="buy(1)">⚙️ Lubricated Bearings (-15V)<br><small>Increases scrolling multiplier by +2</small></button>
+        <button class="btn" onclick="buy(2)">🎡 Gravity Flywheels (-100V)<br><small>Automated system tick: +5V/sec</small></button>
+        <button class="btn" onclick="buy(3)">🌀 Hyper-Drive Wormhole (-500V)<br><small>Automated system tick: +40V/sec</small></button>
+    </div>
+
+    <script>
+        const eDisp = document.getElementById('energy'), mDisp = document.getElementById('mult');
+        let volts = 0, multiplier = 1, autoPower = 0, lastScrollY = window.scrollY, audioCtx = null;
+
+        function playTick(freq) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.value = freq; g.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // 🧠 The Scroll Vector Intercept Hook
+        window.onscroll = () => {
+            let currentScroll = window.scrollY;
+            let difference = Math.abs(currentScroll - lastScrollY);
+
+            // Guard rails: prevent infinite anchor lock loops from triggering false points
+            if (difference > 0 && difference < 2000) {
+                volts += multiplier;
+                eDisp.innerText = Math.floor(volts) + "V";
+                playTick(600 + (multiplier * 2));
+            }
+
+            // Infinite loop track reset layout: Snaps the user window position back towards the center of the page 
+            if (currentScroll > 40000 || currentScroll < 5000) {
+                window.scrollTo(0, 25000);
+                currentScroll = 25000;
+            }
+            lastScrollY = currentScroll;
+        };
+
+        // 🛠️ Automation Tycoon Engine Upgrades
+        function buy(type) {
+            if (type === 1 && volts >= 15) {
+                volts -= 15; multiplier += 2;
+                playTick(800);
+            } else if (type === 2 && volts >= 100) {
+                volts -= 100; autoPower += 5;
+                playTick(1000);
+            } else if (type === 3 && volts >= 500) {
+                volts -= 500; autoPower += 40;
+                playTick(1200);
+            } else {
+                playTick(200);
+                return;
+            }
+            eDisp.innerText = Math.floor(volts) + "V";
+            mDisp.innerText = multiplier;
+        }
+
+        // ⏳ Automated Frame Step Ticks
+        setInterval(() => {
+            if (autoPower > 0) {
+                volts += autoPower / 10; // Splitting value over faster intervals updates visual smoothly
+                eDisp.innerText = Math.floor(volts) + "V";
+                if (Math.random() > 0.8) playTick(400); // Intermittent automated feedback tones
+            }
+        }, 100);
+
+        // Standard initialized window coordinate load alignment
+        window.scrollTo(0, 25000);
+    </script>
+</body>
+</html>
