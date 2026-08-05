@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🗑️ Black Hole Bin</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #008080; font-family: sans-serif; user-select: none; }
+        #desktop { width: 100vw; height: 100vh; position: relative; }
+        .file { position: absolute; width: 80px; text-align: center; cursor: grab; font-size: 0.8rem; font-weight: bold; color: #fff; z-index: 5; text-shadow: 1px 1px 2px #000; }
+        .file:active { cursor: grabbing; }
+        .icon { font-size: 2.2rem; display: block; margin-bottom: 4px; }
+        #bin { position: absolute; right: 40px; bottom: 40px; width: 90px; text-align: center; color: #ff3366; font-weight: bold; font-size: 0.9rem; text-shadow: 0 0 10px #ff3366; }
+        #bin .icon { font-size: 3.5rem; transition: transform 0.1s; }
+        #log { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #00ff66; padding: 10px 20px; border-radius: 4px; font-family: monospace; font-size: 0.9rem; display: none; border: 1px solid #00ff66; z-index: 10; }
+    </style>
+</head>
+<body>
+
+    <div id="log">SYSTEM NOTICE: File deletion initialized...</div>
+
+    <div id="desktop">
+        <!-- THE RECYCLER VECTOR CORE -->
+        <div id="bin"><span class="icon">🗑️</span>RECYCLER</div>
+
+        <!-- TARGET DESKTOP ASSET IMAGES -->
+        <div class="file" id="f1" style="left: 40px; top: 40px;"><span class="icon">📄</span>homework.txt</div>
+        <div class="file" id="f2" style="left: 40px; top: 150px;"><span class="icon">🖼️</span>selfie.jpg</div>
+        <div class="file" id="f3" style="left: 40px; top: 260px;"><span class="icon">🎵</span>song.mp3</div>
+    </div>
+
+    <script>
+        const bin = document.getElementById('bin'), log = document.getElementById('log'), dt = document.getElementById('desktop');
+        let dragItem = null, offsetX = 0, offsetY = 0, audioCtx = null;
+        let files = [];
+
+        const errors = [
+            "❌ ERROR: File is too heavy, trash bin capsized.",
+            "❌ CRITICAL: Accidental deletion of desktop wallpaper instead.",
+            "❌ SYSTEM PANIC: Trash bin refuses to digest pixel formats.",
+            "❌ REFUSED: File fought back and escaped containment bounds."
+        ];
+
+        function playBeep(freq, type='sawtooth') {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = type; o.frequency.value = freq;
+                if(type === 'sawtooth') o.frequency.exponentialRampToValueAtTime(freq/4, audioCtx.currentTime + 0.2);
+                g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.2);
+            } catch(e) {}
+        }
+
+        // Initialize kinetic physics data for all generated files
+        document.querySelectorAll('.file').forEach(el => {
+            let fileObj = {
+                el: el,
+                x: parseFloat(el.style.left), y: parseFloat(el.style.top),
+                vx: 0, vy: 0, isDragging: false
+            };
+            files.push(fileObj);
+
+            // Drag setup intercept tracking lines
+            el.addEventListener('mousedown', (e) => {
+                dragItem = fileObj;
+                fileObj.isDragging = true;
+                fileObj.vx = 0; fileObj.vy = 0;
+                offsetX = e.clientX - fileObj.x;
+                offsetY = e.clientY - fileObj.y;
+                playBeep(400, 'sine');
+            });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!dragItem) return;
+            dragItem.x = e.clientX - offsetX;
+            dragItem.y = e.clientY - offsetY;
+            dragItem.el.style.left = dragItem.x + 'px';
+            dragItem.el.style.top = dragItem.y + 'px';
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (dragItem) { dragItem.isDragging = false; dragItem = null; }
+        });
+
+        // 🧠 Kinetic Fluid Vector Engine Loop
+        function physics() {
+            const br = bin.getBoundingClientRect();
+            const bx = br.left + br.width / 2, by = br.top + br.height / 2;
+
+            files.forEach(f => {
+                if (f.isDragging) return;
+
+                // 1. Distance tracking matrix calculation against bin center point coordinates
+                let dx = bx - (f.x + 40), dy = by - (f.y + 30);
+                let dist = Math.hypot(dx, dy);
+
+                // 2. Black Hole Proximity Check: If too close, apply immediate explosive impulse forces
+                if (dist < 130) {
+                    playBeep(120, 'sawtooth');
+                    bin.style.transform = "scale(1.3)";
+                    setTimeout(() => bin.style.transform = "scale(1)", 100);
+
+                    // Calculate escape angle vectors (Inverted direction multiplier)
+                    let angle = Math.atan2(dy, dx);
+                    f.vx = -Math.cos(angle) * (Math.random() * 25 + 15);
+                    f.vy = -Math.sin(angle) * (Math.random() * 25 + 15);
+
+                    // Trigger flashing system notices node text strings
+                    log.innerText = errors[Math.floor(Math.random() * errors.length)];
+                    log.style.display = 'block';
+                    setTimeout(() => log.style.display = 'none', 2000);
+
+                    // Check if it accidentally triggered backdrop erase gag
+                    if (log.innerText.includes("wallpaper")) {
+                        dt.style.background = dt.style.background === 'black' ? '#008080' : 'black';
+                    }
+                }
+
+                // 3. Update velocity position scalars frame-by-frame
+                f.vx *= 0.92; f.vy *= 0.92; // Friction dampening bounds
+                f.x += f.vx; f.y += f.vy;
+
+                // 4. Boundary screen bounce physics constraints
+                if (f.x < 0) { f.x = 0; f.vx *= -1; }
+                if (f.x > window.innerWidth - 80) { f.x = window.innerWidth - 80; f.vx *= -1; }
+                if (f.y < 0) { f.y = 0; f.vy *= -1; }
+                if (f.y > window.innerHeight - 70) { f.y = window.innerHeight - 70; f.vy *= -1; }
+
+                f.el.style.left = f.x + 'px';
+                f.el.style.top = f.y + 'px';
+            });
+
+            requestAnimationFrame(physics);
+        }
+        requestAnimationFrame(physics);
+    </script>
+</body>
+</html>
