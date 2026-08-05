@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📻 Vintage Live Radio</title>
+    <style>
+        body { background: #0c0d12; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+        #chassis { width: 380px; background: linear-gradient(135deg, #2b1d14, #1a100a); border: 6px solid #4a3525; padding: 25px; border-radius: 12px; box-shadow: 0 15px 40px #000, inset 0 0 20px #000; }
+        #display-window { background: #152215; border: 3px solid #111; padding: 15px; border-radius: 6px; box-shadow: inset 0 0 15px #000; margin-bottom: 25px; height: 75px; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        #display-window::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18,35,18,0) 95%, rgba(0,255,102,0.15) 5%); background-size: 100% 4px; pointer-events: none; }
+        #freq { color: #ff9900; font-size: 1.8rem; font-weight: bold; text-shadow: 0 0 10px #ff9900; letter-spacing: 2px; margin: 0; }
+        #station-info { color: #00ff66; font-size: 0.85rem; text-shadow: 0 0 5px #00ff66; margin-top: 5px; font-weight: bold; text-transform: uppercase; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: #222; height: 12px; border-radius: 6px; border: 2px solid #111; outline: none; margin: 20px 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 28px; background: #ff3333; border: 1px solid #000; border-radius: 2px; cursor: pointer; box-shadow: 0 0 8px #ff3333; }
+        .btn { background: #333; color: #fff; border: 2px solid #444; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit; width: 100%; box-shadow: 0 4px #111; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px #111; }
+        .dial-label { display: flex; justify-content: space-between; color: #888; font-size: 0.75rem; padding: 0 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="chassis">
+        <div id="display-window">
+            <div id="freq">88.0 MHz</div>
+            <div id="station-info">OFFLINE - CLICK PLAY</div>
+        </div>
+        
+        <div class="dial-label"><span>88</span><span>92</span><span>97</span><span>102</span><span>106</span></div>
+        <input type="range" id="tuner" min="880" max="1060" value="880" step="5" oninput="tune()">
+        
+        <button class="btn" id="power" onclick="togglePower()">📻 TURN ON / PLAY</button>
+    </div>
+
+    <script>
+        const tuner = document.getElementById('tuner'), freqDisp = document.getElementById('freq'), infoDisp = document.getElementById('station-info'), powerBtn = document.getElementById('power');
+        
+        let audioStream = new Audio(); 
+        audioStream.crossOrigin = "anonymous";
+        
+        let audioCtx = null, staticNode = null, isPlaying = false, tuneTimeout = null;
+
+        // 📋 WORKING STANDALONE STREAM DIRECTORY
+        const dialMatrix = {
+            880: { name: "Classic FM (UK)", url: "https://planetradio.co.uk" },
+            920: { name: "SomaFM Groove Salad (Ambient)", url: "https://somafm.com" },
+            970: { name: "SomaFM Drone Zone (Space)", url: "https://somafm.com" },
+            1020: { name: "SomaFM Synthzone (Synthwave)", url: "https://somafm.com" },
+            1060: { name: "Classic Rock Radio", url: "https://rockantenne.de" }
+        };
+
+        // 🔊 Procedural White Noise Audio Buffer
+        function startStaticNoise() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (staticNode) return;
+
+                let bufferSize = audioCtx.sampleRate * 2,
+                    buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate),
+                    data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                staticNode = audioCtx.createBufferSource();
+                staticNode.buffer = buffer;
+                staticNode.loop = true;
+
+                let gainNode = audioCtx.createGain();
+                gainNode.gain.value = 0.08; // Safe background hiss limit
+
+                staticNode.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                staticNode.start();
+            } catch(e) {}
+        }
+
+        function stopStaticNoise() {
+            if (staticNode) {
+                try { staticNode.stop(); } catch(e) {}
+                staticNode = null;
+            }
+        }
+
+        function tune() {
+            const val = tuner.value;
+            freqDisp.innerText = (val / 10).toFixed(1) + " MHz";
+            
+            if (!isPlaying) return;
+
+            startStaticNoise();
+            audioStream.pause(); 
+            infoDisp.innerText = "TUNING... ⚡";
+
+            // Debounce: Prevents continuous buffer requests while scrubbing the slider dial
+            clearTimeout(tuneTimeout);
+            tuneTimeout = setTimeout(() => {
+                const station = dialMatrix[val];
+                if (station) {
+                    audioStream.src = station.url;
+                    audioStream.play()
+                        .then(() => {
+                            stopStaticNoise();
+                            infoDisp.innerText = station.name;
+                        })
+                        .catch(err => {
+                            infoDisp.innerText = "📶 STREAM BLOCKED / OFFLINE";
+                        });
+                } else {
+                    infoDisp.innerText = "🌌 STATIC / DEAD AIR";
+                }
+            }, 400); 
+        }
+
+        function togglePower() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isPlaying = !isPlaying;
+
+            if (isPlaying) {
+                powerBtn.innerText = "🛑 TURN OFF / SILENCE";
+                powerBtn.style.background = "#ff3366";
+                tune();
+            } else {
+                powerBtn.innerText = "📻 TURN ON / PLAY";
+                powerBtn.style.background = "#333";
+                infoDisp.innerText = "OFFLINE";
+                audioStream.pause();
+                stopStaticNoise();
+                clearTimeout(tuneTimeout);
+            }
+        }
+    </script>
+</body>
+</html>
