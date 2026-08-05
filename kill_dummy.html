@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>⚔️ Kill the Dummy Arcade</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #141111; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+        #hud { position: fixed; top: 25px; left: 25px; color: #00ff66; font-size: 1.5rem; font-weight: bold; text-shadow: 0 0 10px #00ff66; z-index: 10; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">SMASHED: <span id="sc">0</span> | LIVES: <span id="lv">3</span></div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), sDisp = document.getElementById('sc'), lDisp = document.getElementById('lv');
+        let W, H, score = 0, lives = 3, run = true, items = [], trail = [], isMouseDown = false, audioCtx = null;
+
+        function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        function snd(f, type='sine', len=0.12) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = type; o.frequency.value = f;
+                if(type === 'sawtooth') o.frequency.exponentialRampToValueAtTime(f/4, audioCtx.currentTime + len);
+                g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + len);
+            } catch(e) {}
+        }
+
+        // 🚀 Target Generation Pipeline Loop
+        function spawnItem() {
+            if (!run) return;
+            // 85% chance it's a sliceable dummy node, 15% chance it's an explosive trap bomb
+            let isBomb = Math.random() < 0.16;
+            items.push({
+                x: W * (0.15 + Math.random() * 0.7),
+                y: H + 30,
+                vx: (Math.random() - 0.5) * 6,
+                vy: -(12 + Math.random() * 6), // Massive upward kinetic lift velocity
+                r: isBomb ? 24 : 32,
+                isBomb: isBomb,
+                txt: isBomb ? "💣 BOMB" : "🤖 DUMMY",
+                col: isBomb ? "#ff0055" : "#00ff66"
+            });
+            // Accelerate launch frequencies as score scales upward
+            setTimeout(spawnItem, Math.max(600, 1600 - score * 30));
+        }
+
+        // 📐 Swiping Slash Coordinate Tracking & Physics Loop
+        function loop() {
+            if (!run) return;
+            
+            // Clean trail overlay handles fading cutting lines smoothly
+            ctx.fillStyle = 'rgba(20, 17, 17, 0.35)';
+            ctx.fillRect(0, 0, W, H);
+
+            // 1. Draw mouse drag track lines
+            if (trail.length > 1) {
+                ctx.strokeStyle = '#00f3ff'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(trail[0].x, trail[0].y);
+                for(let i=1; i<trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+                ctx.stroke();
+                if(trail.length > 6) trail.shift(); // Evacuate old trail indexes
+            }
+
+            // 2. Trajectory Physics updates
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.vy += 0.24; // Apply structural gravity factor down the loop
+                item.x += item.vx; item.y += item.vy;
+
+                // Render entity circular layout frames natively
+                ctx.fillStyle = item.col;
+                ctx.beginPath(); ctx.arc(item.x, item.y, item.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+                ctx.fillText(item.txt, item.x, item.y + 3);
+
+                // 🎯 Real-time Swipe Hitbox Overlap Calculations
+                if (isMouseDown && trail.length > 0) {
+                    let lastPt = trail[trail.length - 1];
+                    let dist = Math.hypot(item.x - lastPt.x, item.y - lastPt.y);
+                    
+                    if (dist < item.r + 10) {
+                        items.splice(i, 1); // Delete target from canvas memory space array
+                        
+                        if (item.isBomb) {
+                            // Hit a dangerous warning node trigger -> Explosive fail state
+                            snd(90, 'sawtooth', 0.4);
+                            lives = 0; lDisp.innerText = 0;
+                            gameOver();
+                        } else {
+                            score++; sDisp.innerText = score;
+                            snd(440 + (score * 10), 'triangle', 0.08); // Rising synth smash tone
+                        }
+                        continue;
+                    }
+                }
+
+                // Garbage Collection: Catch targets dropping past viewport floor boundary line
+                if (item.y > H + 50 && item.vy > 0) {
+                    items.splice(i, 1);
+                    if (!item.isBomb) {
+                        // Let a dummy target pass through un-slashed -> Cost a life point
+                        lives--; lDisp.innerText = lives;
+                        snd(180, 'sine', 0.2);
+                        if (lives <= 0) gameOver();
+                    }
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver() {
+            run = false;
+            ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0,0,W,H);
+            ctx.fillStyle = "#ff0055"; ctx.font = "bold 2.5rem monospace"; ctx.textAlign = "center";
+            ctx.fillText("💥 TERMINATION COMPLETE", W/2, H/2 - 20);
+            ctx.fillStyle = "#fff"; ctx.font = "1.2rem monospace";
+            ctx.fillText(`Final Dummies Smashed: ${score}`, W/2, H/2 + 30);
+            ctx.fillText("Press Spacebar to Reset Arena System", W/2, H/2 + 70);
+        }
+
+        // 🖱️ Event Capture Input Arrays
+        window.addEventListener('mousedown', (e) => { isMouseDown = true; trail = [{x:e.clientX, y:e.clientY}]; });
+        window.addEventListener('mouseup', () => { isMouseDown = false; trail = []; });
+        window.addEventListener('mousemove', (e) => { if(isMouseDown) trail.push({x:e.clientX, y:e.clientY}); });
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !run) {
+                score = 0; lives = 3; sDisp.innerText = 0; lDisp.innerText = 3;
+                items = []; trail = []; run = true;
+                loop();
+            }
+        });
+
+        // Initialize core engines instantly
+        spawnItem();
+        loop();
+    </script>
+</body>
+</html>
