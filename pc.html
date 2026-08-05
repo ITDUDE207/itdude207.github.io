@@ -16,10 +16,9 @@
             overflow: hidden;
         }
 
-        /* 🖥️ THE PC MONITOR FRAME */
         #monitor {
-            width: 900px;
-            height: 650px;
+            width: 960px;
+            height: 680px;
             background: #0a0a12;
             border: 12px solid #2a2a3a;
             border-radius: 12px;
@@ -28,7 +27,6 @@
             overflow: hidden;
         }
 
-        /* 🖼️ DESKTOP BACKGROUND */
         #desktop {
             width: 100%;
             height: 100%;
@@ -102,17 +100,27 @@
         /* 📝 NOTEPAD APP */
         #notepad textarea {
             width: 100%;
-            height: 200px;
+            height: 220px;
             background: #0a0a12;
             color: #00ff66;
             border: 1px solid #333;
             border-radius: 4px;
-            padding: 8px;
+            padding: 10px;
             font-family: 'Courier New', monospace;
             font-size: 0.85rem;
             resize: none;
             outline: none;
+            line-height: 1.6;
         }
+        #notepad textarea:focus { border-color: #00ff66; }
+        .notepad-status {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: #666;
+        }
+        .notepad-status .file-name { color: #00f3ff; }
 
         /* 🧮 CALCULATOR APP */
         #calculator .calc-display {
@@ -149,23 +157,74 @@
         .calc-grid .eq:hover { background: #00cc55; }
 
         /* 📁 FILE EXPLORER */
-        #explorer .file-list {
+        #explorer {
+            width: 480px;
+            min-height: 350px;
+        }
+        .explorer-toolbar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .explorer-toolbar button {
+            background: #2a2a3e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .explorer-toolbar button:hover { background: #3a3a5e; color: #fff; }
+        .explorer-toolbar .danger:hover { background: #550a1a; border-color: #ff0055; color: #ff0055; }
+        .file-list {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 4px;
         }
-        #explorer .file-item {
+        .file-list::-webkit-scrollbar { width: 4px; }
+        .file-list::-webkit-scrollbar-track { background: #0a0a12; }
+        .file-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .file-item {
             background: #0a0a12;
             padding: 15px 10px;
             text-align: center;
             border-radius: 4px;
             border: 1px solid #333;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            position: relative;
         }
-        #explorer .file-item:hover { background: #1a1a2e; }
-        #explorer .file-item .icon { font-size: 1.8rem; display: block; }
-        #explorer .file-item .name { font-size: 0.7rem; color: #888; margin-top: 4px; }
+        .file-item:hover { background: #1a1a2e; border-color: #00f3ff; }
+        .file-item .icon { font-size: 1.8rem; display: block; }
+        .file-item .name { font-size: 0.7rem; color: #888; margin-top: 4px; word-break: break-all; }
+        .file-item .delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            background: none;
+            border: none;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .file-item:hover .delete-btn { opacity: 1; }
+        .file-item .delete-btn:hover { color: #ff0055; }
+        .empty-files {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #555;
+            padding: 30px 0;
+            font-size: 0.9rem;
+        }
 
         /* 🗄️ TASKBAR */
         #taskbar {
@@ -220,6 +279,58 @@
         #boot-screen .bar { width: 300px; height: 8px; background: #1a1a2e; border-radius: 4px; overflow: hidden; }
         #boot-screen .bar-fill { height: 100%; width: 0%; background: #00ff66; transition: width 0.1s; }
         #boot-screen .status { margin-top: 15px; font-size: 0.8rem; color: #888; }
+
+        /* 📝 NEW FILE MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #1e1e2e;
+            border: 1px solid #3a3a4a;
+            border-radius: 8px;
+            padding: 25px;
+            width: 350px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+        .modal-box h3 { color: #00f3ff; margin-bottom: 10px; }
+        .modal-box input {
+            width: 100%;
+            padding: 10px;
+            background: #0a0a12;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            margin: 10px 0;
+        }
+        .modal-box input:focus { border-color: #00f3ff; }
+        .modal-box .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-box .modal-actions button {
+            padding: 6px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+        .modal-box .modal-actions .cancel { background: #333; color: #aaa; }
+        .modal-box .modal-actions .cancel:hover { background: #444; }
+        .modal-box .modal-actions .confirm { background: #00ff66; color: #000; }
+        .modal-box .modal-actions .confirm:hover { background: #00cc55; }
     </style>
 </head>
 <body>
@@ -250,13 +361,17 @@
             </div>
 
             <!-- 📝 NOTEPAD WINDOW -->
-            <div id="notepad" class="window" style="left:60px; top:40px; width:400px;">
+            <div id="notepad" class="window" style="left:60px; top:40px; width:450px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>📝 Notepad</span>
                     <button class="close-btn" onclick="closeWindow('notepad')">✕</button>
                 </div>
                 <div class="window-body">
-                    <textarea placeholder="Type something..."></textarea>
+                    <textarea id="notepad-text" placeholder="Type something... It auto-saves!" oninput="saveNotepad()"></textarea>
+                    <div class="notepad-status">
+                        <span class="file-name" id="notepad-filename">📄 Untitled</span>
+                        <span id="notepad-char-count">0 characters</span>
+                    </div>
                 </div>
             </div>
 
@@ -290,31 +405,17 @@
             </div>
 
             <!-- 📁 FILE EXPLORER -->
-            <div id="explorer" class="window" style="left:120px; top:80px; width:400px; height:300px;">
+            <div id="explorer" class="window" style="left:120px; top:60px; width:500px; min-height:380px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>📁 File Explorer</span>
                     <button class="close-btn" onclick="closeWindow('explorer')">✕</button>
                 </div>
                 <div class="window-body">
-                    <div style="color:#888; font-size:0.8rem; margin-bottom:10px;">📂 C:\Documents</div>
-                    <div class="file-list">
-                        <div class="file-item" onclick="alert('📄 Opening: readme.txt\n\nWelcome to your simulated PC!')">
-                            <span class="icon">📄</span>
-                            <span class="name">readme.txt</span>
-                        </div>
-                        <div class="file-item" onclick="alert('📁 Opening: Projects folder...')">
-                            <span class="icon">📁</span>
-                            <span class="name">Projects</span>
-                        </div>
-                        <div class="file-item" onclick="alert('🖼️ Opening: wallpaper.jpg')">
-                            <span class="icon">🖼️</span>
-                            <span class="name">wallpaper.jpg</span>
-                        </div>
-                        <div class="file-item" onclick="alert('🎵 Playing: ambient.mp3 (just kidding, no audio!)')">
-                            <span class="icon">🎵</span>
-                            <span class="name">ambient.mp3</span>
-                        </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="color:#888; font-size:0.8rem;">📂 C:\Documents</span>
+                        <button class="explorer-toolbar" style="background:#00ff66; color:#000; border-color:#00ff66; padding:4px 16px;" onclick="showNewFileModal()">➕ New File</button>
                     </div>
+                    <div class="file-list" id="file-list"></div>
                 </div>
             </div>
 
@@ -327,8 +428,8 @@
                 <div class="window-body" style="text-align:center;">
                     <div style="font-size:3rem; margin-bottom:10px;">🖥️</div>
                     <h3 style="color:#00f3ff;">Simulated PC</h3>
-                    <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 1.0</p>
-                    <p style="color:#666; font-size:0.75rem;">A fully functional desktop simulation<br>running entirely in your browser.</p>
+                    <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 2.0</p>
+                    <p style="color:#666; font-size:0.75rem;">With persistent file system and auto-saving notepad!</p>
                     <div style="margin-top:15px; color:#555; font-size:0.7rem; border-top:1px solid #333; padding-top:10px;">
                         🖱️ Drag windows by their title bars
                     </div>
@@ -348,7 +449,170 @@
         </div>
     </div>
 
+    <!-- 📝 NEW FILE MODAL -->
+    <div class="modal-overlay" id="newfile-modal">
+        <div class="modal-box">
+            <h3>📄 New File</h3>
+            <p style="color:#888; font-size:0.8rem;">Enter a name for your new text file:</p>
+            <input type="text" id="newfile-input" placeholder="my_document.txt" onkeydown="if(event.key==='Enter') confirmNewFile()">
+            <div class="modal-actions">
+                <button class="cancel" onclick="hideNewFileModal()">Cancel</button>
+                <button class="confirm" onclick="confirmNewFile()">Create</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ========================================
+        // 📂 FILE SYSTEM ENGINE (localStorage)
+        // ========================================
+        const STORAGE_KEY = 'simulated_pc_files';
+
+        function getFiles() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch(e) {
+                return {};
+            }
+        }
+
+        function saveFiles(files) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+        }
+
+        function getFileContent(filename) {
+            const files = getFiles();
+            return files[filename] || '';
+        }
+
+        function setFileContent(filename, content) {
+            const files = getFiles();
+            files[filename] = content;
+            saveFiles(files);
+            renderFileList();
+        }
+
+        function deleteFile(filename) {
+            const files = getFiles();
+            delete files[filename];
+            saveFiles(files);
+            renderFileList();
+            // If currently editing this file in notepad, clear it
+            if (currentNotepadFile === filename) {
+                currentNotepadFile = null;
+                document.getElementById('notepad-text').value = '';
+                document.getElementById('notepad-filename').textContent = '📄 Untitled';
+                updateCharCount();
+            }
+        }
+
+        function getFileList() {
+            const files = getFiles();
+            return Object.keys(files).sort();
+        }
+
+        // ========================================
+        // 📝 NOTEPAD ENGINE
+        // ========================================
+        let currentNotepadFile = null;
+        const notepadText = document.getElementById('notepad-text');
+        const notepadFilename = document.getElementById('notepad-filename');
+        const notepadCharCount = document.getElementById('notepad-char-count');
+
+        function saveNotepad() {
+            const content = notepadText.value;
+            if (currentNotepadFile) {
+                setFileContent(currentNotepadFile, content);
+            } else {
+                // Auto-save to a temporary file if untitled
+                const files = getFiles();
+                const tempName = 'untitled_' + Date.now() + '.txt';
+                files[tempName] = content;
+                saveFiles(files);
+                currentNotepadFile = tempName;
+                notepadFilename.textContent = '📄 ' + tempName;
+                renderFileList();
+            }
+            updateCharCount();
+        }
+
+        function updateCharCount() {
+            const count = notepadText.value.length;
+            notepadCharCount.textContent = count + ' characters';
+        }
+
+        function openFileInNotepad(filename) {
+            const content = getFileContent(filename);
+            currentNotepadFile = filename;
+            notepadText.value = content;
+            notepadFilename.textContent = '📄 ' + filename;
+            updateCharCount();
+            openWindow('notepad');
+        }
+
+        // Auto-save on any change
+        notepadText.addEventListener('input', saveNotepad);
+
+        // ========================================
+        // 📁 FILE EXPLORER RENDERER
+        // ========================================
+        function renderFileList() {
+            const container = document.getElementById('file-list');
+            const files = getFileList();
+            
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty-files">📂 No files yet. Click "New File" to create one!</div>';
+                return;
+            }
+
+            container.innerHTML = files.map(filename => {
+                const isTxt = filename.endsWith('.txt');
+                const icon = isTxt ? '📄' : '📄';
+                return `
+                    <div class="file-item" onclick="openFileInNotepad('${filename}')">
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteFile('${filename}')">✕</button>
+                        <span class="icon">${icon}</span>
+                        <span class="name">${filename}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ========================================
+        // 📝 NEW FILE MODAL
+        // ========================================
+        function showNewFileModal() {
+            document.getElementById('newfile-modal').classList.add('show');
+            document.getElementById('newfile-input').value = '';
+            document.getElementById('newfile-input').focus();
+        }
+
+        function hideNewFileModal() {
+            document.getElementById('newfile-modal').classList.remove('show');
+        }
+
+        function confirmNewFile() {
+            const input = document.getElementById('newfile-input');
+            let name = input.value.trim();
+            if (!name) {
+                name = 'untitled_' + Date.now() + '.txt';
+            }
+            if (!name.endsWith('.txt')) {
+                name += '.txt';
+            }
+            const files = getFiles();
+            if (files[name]) {
+                alert('⚠️ A file with that name already exists!');
+                return;
+            }
+            files[name] = '';
+            saveFiles(files);
+            renderFileList();
+            hideNewFileModal();
+            openFileInNotepad(name);
+        }
+
         // ========================================
         // 🚀 BOOT SEQUENCE
         // ========================================
@@ -379,6 +643,7 @@
             } else {
                 setTimeout(() => {
                     document.getElementById('boot-screen').style.display = 'none';
+                    renderFileList();
                 }, 400);
             }
         }
@@ -393,13 +658,6 @@
             if (!win) return;
             win.style.display = 'flex';
             win.style.zIndex = ++zIndexCounter;
-            // Center if not positioned
-            if (!win.style.left || win.style.left === '0px') {
-                const rect = win.getBoundingClientRect();
-                const monitor = document.getElementById('monitor');
-                win.style.left = (monitor.clientWidth / 2 - rect.width / 2) + 'px';
-                win.style.top = (monitor.clientHeight / 2 - rect.height / 2) + 'px';
-            }
             updateTaskbar();
         }
 
@@ -409,22 +667,13 @@
             updateTaskbar();
         }
 
-        function toggleWindow(id) {
-            const win = document.getElementById(id);
-            if (win.style.display === 'flex') {
-                closeWindow(id);
-            } else {
-                openWindow(id);
-            }
-        }
-
         function updateTaskbar() {
             document.querySelectorAll('.task-btn').forEach(btn => {
                 const id = btn.textContent.trim().toLowerCase().replace(/[^a-z]/g, '');
                 const win = document.getElementById(id === 'calc' ? 'calculator' : 
-                                                       id === 'files' ? 'explorer' : 
-                                                       id === 'about' ? 'about' : 
-                                                       id === 'notepad' ? 'notepad' : null);
+                                               id === 'files' ? 'explorer' : 
+                                               id === 'about' ? 'about' : 
+                                               id === 'notepad' ? 'notepad' : null);
                 if (win) {
                     btn.classList.toggle('active', win.style.display === 'flex');
                 }
@@ -487,7 +736,6 @@
             }
         }
 
-        // Keyboard support for calculator
         document.addEventListener('keydown', (e) => {
             const calc = document.getElementById('calculator');
             if (calc.style.display !== 'flex') return;
@@ -532,7 +780,6 @@
                 bootStatus.textContent = 'Saving system state...';
                 bootFill.style.width = '0%';
                 
-                // Close all windows
                 document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
                 
                 let progress = 0;
@@ -559,6 +806,5 @@
         // ========================================
         boot();
     </script>
-
 </body>
 </html>
