@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔌 Logic Gate Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: #0a0a12;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #00f3ff;
+            text-shadow: 0 0 20px #00f3ff;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .subtitle span.good { color: #00ff66; }
+        .subtitle span.bad { color: #ff3366; }
+
+        /* 🎮 GAME CONTAINER */
+        #game {
+            position: relative;
+            background: #0d0d18;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            padding: 10px;
+        }
+
+        #canvas {
+            display: block;
+            border-radius: 4px;
+            cursor: grab;
+        }
+
+        #canvas:active { cursor: grabbing; }
+
+        /* 📊 HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 640px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .hud .score { color: #00ff66; }
+        .hud .gates { color: #00f3ff; }
+        .hud .status { color: #ffd700; }
+        .hud .malfunctions { color: #ff3366; }
+
+        /* 🎛️ CONTROLS */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #1a1a2e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 8px 18px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #2a2a4e;
+            color: #fff;
+        }
+
+        .btn.reset { background: #2a1a1a; border-color: #ff3366; color: #ff3366; }
+        .btn.reset:hover { background: #3a1a1a; box-shadow: 0 0 15px rgba(255,51,102,0.2); }
+
+        .btn.gate { background: #1a2a1a; border-color: #00ff66; color: #00ff66; }
+        .btn.gate:hover { background: #1a3a1a; box-shadow: 0 0 15px rgba(0,255,102,0.2); }
+
+        .btn.random { background: #1a1a2a; border-color: #ffd700; color: #ffd700; }
+        .btn.random:hover { background: #2a2a3a; box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+
+        .btn.malf { background: #2a1a1a; border-color: #ff8800; color: #ff8800; }
+        .btn.malf:hover { background: #3a2a1a; box-shadow: 0 0 15px rgba(255,136,0,0.2); }
+
+        /* 🏆 WIN OVERLAY */
+        #win-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            z-index: 10;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #win-overlay.show { display: flex; }
+        #win-overlay h2 {
+            font-size: 3rem;
+            color: #00ff66;
+            text-shadow: 0 0 30px #00ff66;
+            margin-bottom: 10px;
+        }
+        #win-overlay p {
+            color: #aaa;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        #win-overlay .btn {
+            background: #00ff66;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        #win-overlay .btn:hover { background: #00cc55; box-shadow: 0 0 20px #00ff66; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 💡 TOOLTIP */
+        .tooltip {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,243,255,0.08);
+            border: 1px solid rgba(0,243,255,0.2);
+            padding: 5px 14px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #666;
+            pointer-events: none;
+            white-space: nowrap;
+            transition: opacity 0.5s;
+        }
+        .tooltip.hidden { opacity: 0; }
+
+        /* 🎨 GATE LEGEND */
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+        .legend span { display: flex; align-items: center; gap: 4px; }
+        .legend .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+        .dot.and { background: #00ff66; }
+        .dot.or { background: #00f3ff; }
+        .dot.not { background: #ffd700; }
+        .dot.malf { background: #ff3366; animation: blink 0.5s infinite; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔌 LOGIC GATE SIMULATOR</h1>
+    <div class="subtitle">Drag gates from the bottom onto the board. Connect <span class="good">inputs</span> to <span class="bad">output</span>!</div>
+
+    <div class="hud">
+        <span class="score">💡 Circuits: <span id="circuits">0</span></span>
+        <span class="gates">🔲 Gates: <span id="gate-count">0</span></span>
+        <span class="malfunctions">⚠️ Malfunctions: <span id="malf-count">0</span></span>
+        <span class="status" id="status">🟢 Build a circuit</span>
+    </div>
+
+    <div id="game">
+        <canvas id="canvas" width="640" height="480"></canvas>
+        <div id="win-overlay">
+            <h2>🎉 CIRCUIT COMPLETE!</h2>
+            <p>You built a working circuit with <span id="final-gates">0</span> gates!</p>
+            <button class="btn" onclick="resetGame()">🔄 New Puzzle</button>
+        </div>
+        <div class="tooltip" id="tooltip">💡 Drag a gate from the bottom onto the board</div>
+    </div>
+
+    <!-- GATE LEGEND -->
+    <div class="legend">
+        <span><span class="dot and"></span> AND</span>
+        <span><span class="dot or"></span> OR</span>
+        <span><span class="dot not"></span> NOT</span>
+        <span><span class="dot malf"></span> Malfunctioning!</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn gate" onclick="selectGate('AND')">🔲 AND</button>
+        <button class="btn gate" onclick="selectGate('OR')">🔲 OR</button>
+        <button class="btn gate" onclick="selectGate('NOT')">🔲 NOT</button>
+        <button class="btn malf" onclick="toggleMalfunctions()">⚠️ Malfunctions: <span id="malf-status">ON</span></button>
+        <button class="btn random" onclick="randomPuzzle()">🎲 Random Puzzle</button>
+        <button class="btn reset" onclick="resetGame()">🗑️ Clear</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = 640, H = 480;
+
+        // ========================================
+        // 🎯 GAME STATE
+        // ========================================
+        const GRID_SIZE = 40;
+        const COLS = Math.floor(W / GRID_SIZE);
+        const ROWS = Math.floor(H / GRID_SIZE);
+
+        let gates = [];
+        let wires = [];
+        let selectedGateType = 'AND';
+        let dragGate = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+        let circuitsCompleted = 0;
+        let malfunctionCount = 0;
+        let malfunctionsEnabled = true;
+        let gateIdCounter = 0;
+
+        // Input and output positions
+        const INPUTS = [
+            { x: 1, y: 2, value: false, label: 'A' },
+            { x: 1, y: 4, value: false, label: 'B' },
+            { x: 1, y: 6, value: false, label: 'C' }
+        ];
+        const OUTPUT = { x: COLS - 2, y: 4, value: false, label: 'OUT' };
+
+        // DOM elements
+        const circuitsEl = document.getElementById('circuits');
+        const gateCountEl = document.getElementById('gate-count');
+        const malfCountEl = document.getElementById('malf-count');
+        const statusEl = document.getElementById('status');
+        const finalGatesEl = document.getElementById('final-gates');
+        const winOverlay = document.getElementById('win-overlay');
+        const tooltip = document.getElementById('tooltip');
+        const malfStatusEl = document.getElementById('malf-status');
+
+        // ========================================
+        // 🧠 GATE CLASS
+        // ========================================
+        class Gate {
+            constructor(x, y, type) {
+                this.id = gateIdCounter++;
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'AND', 'OR', 'NOT'
+                this.inputs = [];
+                this.output = false;
+                this.malfunctioning = false;
+                this.malfunctionTimer = 0;
+                this.label = type;
+            }
+
+            compute() {
+                // Check if malfunctioning
+                if (this.malfunctioning) {
+                    // Randomly invert output
+                    return Math.random() < 0.5;
+                }
+
+                const inputs = this.inputs.map(i => i.value);
+                
+                if (this.type === 'AND') {
+                    return inputs.every(v => v === true);
+                } else if (this.type === 'OR') {
+                    return inputs.some(v => v === true);
+                } else if (this.type === 'NOT') {
+                    return inputs.length > 0 ? !inputs[0] : false;
+                }
+                return false;
+            }
+
+            getInputSlots() {
+                const slots = [];
+                const numInputs = this.type === 'NOT' ? 1 : 2;
+                for (let i = 0; i < numInputs; i++) {
+                    slots.push({
+                        x: this.x - 0.5,
+                        y: this.y - 0.3 + (i * 0.6),
+                        index: i
+                    });
+                }
+                return slots;
+            }
+
+            getOutputSlot() {
+                return { x: this.x + 0.5, y: this.y };
+            }
+        }
+
+        // ========================================
+        // 🎨 DRAWING FUNCTIONS
+        // ========================================
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * GRID_SIZE, 0);
+                ctx.lineTo(i * GRID_SIZE, H);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * GRID_SIZE);
+                ctx.lineTo(W, i * GRID_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw inputs
+            INPUTS.forEach((input, idx) => {
+                const x = input.x * GRID_SIZE;
+                const y = input.y * GRID_SIZE;
+                
+                // Input circle
+                ctx.fillStyle = input.value ? '#00ff66' : '#333';
+                ctx.shadowColor = input.value ? '#00ff66' : 'transparent';
+                ctx.shadowBlur = input.value ? 15 : 0;
+                ctx.beginPath();
+                ctx.arc(x, y, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Label
+                ctx.fillStyle = '#888';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(input.label, x, y - 18);
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = input.value ? '#00ff66' : '#555';
+                ctx.font = '10px monospace';
+                ctx.fillText(input.value ? '1' : '0', x, y + 2);
+            });
+
+            // Draw output
+            const ox = OUTPUT.x * GRID_SIZE;
+            const oy = OUTPUT.y * GRID_SIZE;
+            
+            // Output glow
+            const outputGlow = ctx.createRadialGradient(ox, oy, 0, ox, oy, 30);
+            outputGlow.addColorStop(0, OUTPUT.value ? 'rgba(0,255,102,0.3)' : 'rgba(255,51,102,0.1)');
+            outputGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = outputGlow;
+            ctx.beginPath();
+            ctx.arc(ox, oy, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Output bulb
+            const bulbGrad = ctx.createRadialGradient(ox-5, oy-5, 0, ox, oy, 20);
+            if (OUTPUT.value) {
+                bulbGrad.addColorStop(0, '#66ff99');
+                bulbGrad.addColorStop(0.5, '#00ff66');
+                bulbGrad.addColorStop(1, '#006622');
+            } else {
+                bulbGrad.addColorStop(0, '#444');
+                bulbGrad.addColorStop(1, '#111');
+            }
+            ctx.fillStyle = bulbGrad;
+            ctx.shadowColor = OUTPUT.value ? '#00ff66' : 'transparent';
+            ctx.shadowBlur = OUTPUT.value ? 30 : 0;
+            ctx.beginPath();
+            ctx.arc(ox, oy, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Output label
+            ctx.fillStyle = '#888';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('OUT', ox, oy - 24);
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = OUTPUT.value ? '#00ff66' : '#555';
+            ctx.font = '10px monospace';
+            ctx.fillText(OUTPUT.value ? '💡 ON' : '💡 OFF', ox, oy + 2);
+
+            // Draw wires
+            wires.forEach(wire => {
+                const from = wire.from;
+                const to = wire.to;
+                
+                const fx = from.x * GRID_SIZE;
+                const fy = from.y * GRID_SIZE;
+                const tx = to.x * GRID_SIZE;
+                const ty = to.y * GRID_SIZE;
+
+                const gradient = ctx.createLinearGradient(fx, fy, tx, ty);
+                gradient.addColorStop(0, 'rgba(0, 243, 255, 0.2)');
+                gradient.addColorStop(0.5, 'rgba(0, 243, 255, 0.6)');
+                gradient.addColorStop(1, 'rgba(0, 243, 255, 0.2)');
+
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = '#00f3ff';
+                ctx.shadowBlur = 5;
+                ctx.beginPath();
+                ctx.moveTo(fx, fy);
+                
+                // Draw curved wire
+                const midX = (fx + tx) / 2;
+                const midY = Math.min(fy, ty) - 20;
+                ctx.quadraticCurveTo(midX, midY, tx, ty);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw gates
+            gates.forEach(gate => {
+                const x = gate.x * GRID_SIZE;
+                const y = gate.y * GRID_SIZE;
+                const size = 28;
+
+                // Gate background
+                const isMalf = gate.malfunctioning;
+                const color = isMalf ? '#ff3366' : 
+                              gate.type === 'AND' ? '#00ff66' :
+                              gate.type === 'OR' ? '#00f3ff' : '#ffd700';
+                
+                ctx.shadowColor = isMalf ? '#ff3366' : color;
+                ctx.shadowBlur = isMalf ? 20 : 10;
+                
+                // Rounded rectangle
+                const rx = x - size/2;
+                const ry = y - size/2;
+                const r = 6;
+                ctx.beginPath();
+                ctx.moveTo(rx + r, ry);
+                ctx.lineTo(rx + size - r, ry);
+                ctx.quadraticCurveTo(rx + size, ry, rx + size, ry + r);
+                ctx.lineTo(rx + size, ry + size - r);
+                ctx.quadraticCurveTo(rx + size, ry + size, rx + size - r, ry + size);
+                ctx.lineTo(rx + r, ry + size);
+                ctx.quadraticCurveTo(rx, ry + size, rx, ry + size - r);
+                ctx.lineTo(rx, ry + r);
+                ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+                ctx.closePath();
+                ctx.fillStyle = isMalf ? 'rgba(255,51,102,0.3)' : 'rgba(0,0,0,0.6)';
+                ctx.fill();
+                ctx.strokeStyle = isMalf ? '#ff3366' : color;
+                ctx.lineWidth = isMalf ? 3 : 2;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Gate label
+                ctx.fillStyle = isMalf ? '#ff3366' : '#fff';
+                ctx.font = 'bold 14px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(gate.type, x, y - 2);
+
+                // Malfunction indicator
+                if (isMalf) {
+                    ctx.fillStyle = '#ff3366';
+                    ctx.font = '10px monospace';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText('⚠️', x + 16, y - 14);
+                }
+
+                // Input dots
+                const slots = gate.getInputSlots();
+                slots.forEach((slot, idx) => {
+                    const sx = slot.x * GRID_SIZE;
+                    const sy = slot.y * GRID_SIZE;
+                    const hasInput = gate.inputs.length > idx;
+                    
+                    ctx.fillStyle = hasInput ? '#00f3ff' : '#333';
+                    ctx.shadowColor = hasInput ? '#00f3ff' : 'transparent';
+                    ctx.shadowBlur = hasInput ? 8 : 0;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                // Output dot
+                const outSlot = gate.getOutputSlot();
+                const osx = outSlot.x * GRID_SIZE;
+                const osy = outSlot.y * GRID_SIZE;
+                ctx.fillStyle = gate.output ? '#00ff66' : '#333';
+                ctx.shadowColor = gate.output ? '#00ff66' : 'transparent';
+                ctx.shadowBlur = gate.output ? 10 : 0;
+                ctx.beginPath();
+                ctx.arc(osx, osy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw gate being dragged
+            if (dragGate) {
+                const x = dragGate.x * GRID_SIZE;
+                const y = dragGate.y * GRID_SIZE;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.strokeRect(x - 20, y - 20, 40, 40);
+                ctx.setLineDash([]);
+            }
+
+            // Draw connecting wire preview
+            if (dragGate && dragGate.connecting) {
+                const from = dragGate.connecting.from;
+                const fx = from.x * GRID_SIZE;
+                const fy = from.y * GRID_SIZE;
+                const mx = dragGate.x * GRID_SIZE;
+                const my = dragGate.y * GRID_SIZE;
+
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(fx, fy);
+                ctx.lineTo(mx, my);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Update tooltip
+            if (gates.length === 0) {
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        }
+
+        // ========================================
+        // 🧠 COMPUTE CIRCUIT
+        // ========================================
+        function computeCircuit() {
+            // Reset all gate outputs
+            gates.forEach(g => g.output = false);
+            
+            // Compute each gate in order
+            let changed = true;
+            let iterations = 0;
+            while (changed && iterations < 50) {
+                changed = false;
+                iterations++;
+                
+                gates.forEach(gate => {
+                    // Get input values
+                    const inputValues = gate.inputs.map(wire => {
+                        // If wire comes from an input
+                        const input = INPUTS.find(inp => 
+                            inp.x === wire.from.x && inp.y === wire.from.y
+                        );
+                        if (input) return input.value;
+                        
+                        // If wire comes from another gate
+                        const fromGate = gates.find(g => 
+                            g.x === wire.from.x && g.y === wire.from.y
+                        );
+                        if (fromGate) return fromGate.output;
+                        
+                        return false;
+                    });
+                    
+                    // Update gate inputs
+                    gate.inputs = inputValues.map(v => ({ value: v }));
+                    
+                    // Compute output
+                    const newOutput = gate.compute();
+                    if (newOutput !== gate.output) {
+                        changed = true;
+                        gate.output = newOutput;
+                    }
+                });
+            }
+
+            // Check if output is connected
+            const outputConnected = wires.some(wire => 
+                wire.to.x === OUTPUT.x && wire.to.y === OUTPUT.y
+            );
+
+            if (outputConnected) {
+                // Find what's connected to output
+                const outWire = wires.find(w => w.to.x === OUTPUT.x && w.to.y === OUTPUT.y);
+                const fromGate = gates.find(g => g.x === outWire.from.x && g.y === outWire.from.y);
+                OUTPUT.value = fromGate ? fromGate.output : false;
+            } else {
+                OUTPUT.value = false;
+            }
+
+            // Check for malfunction triggers
+            gates.forEach(gate => {
+                if (gate.malfunctioning) {
+                    gate.malfunctionTimer--;
+                    if (gate.malfunctionTimer <= 0) {
+                        gate.malfunctioning = false;
+                        statusEl.textContent = '🔧 Gate repaired!';
+                        statusEl.style.color = '#00ff66';
+                    }
+                }
+            });
+
+            draw();
+        }
+
+        // ========================================
+        // 🎲 MALFUNCTION SYSTEM
+        // ========================================
+        function triggerMalfunction() {
+            if (!malfunctionsEnabled) return;
+            
+            const workingGates = gates.filter(g => !g.malfunctioning);
+            if (workingGates.length === 0) return;
+
+            const gate = workingGates[Math.floor(Math.random() * workingGates.length)];
+            gate.malfunctioning = true;
+            gate.malfunctionTimer = 3 + Math.floor(Math.random() * 5); // 3-8 seconds
+            
+            malfunctionCount++;
+            malfCountEl.textContent = malfunctionCount;
+            
+            statusEl.textContent = `⚠️ ${gate.type} gate malfunctioning! (${gate.malfunctionTimer}s)`;
+            statusEl.style.color = '#ff3366';
+            
+            computeCircuit();
+        }
+
+        // ========================================
+        // 🖱️ DRAG AND DROP
+        // ========================================
+        function getGridPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+            
+            return {
+                x: Math.round(mx / GRID_SIZE),
+                y: Math.round(my / GRID_SIZE)
+            };
+        }
+
+        function isOnBoard(x, y) {
+            return x >= 0 && x < COLS && y >= 0 && y < ROWS;
+        }
+
+        function isOccupied(x, y, excludeId) {
+            return gates.some(g => g.x === x && g.y === y && g.id !== excludeId);
+        }
+
+        function isInput(x, y) {
+            return INPUTS.some(inp => inp.x === x && inp.y === y);
+        }
+
+        function isOutput(x, y) {
+            return OUTPUT.x === x && OUTPUT.y === y;
+        }
+
+        function getGateAt(x, y) {
+            return gates.find(g => g.x === x && g.y === y);
+        }
+
+        function getSlotAt(x, y) {
+            // Check if clicking on a gate's input or output slot
+            for (const gate of gates) {
+                const slots = gate.getInputSlots();
+                for (const slot of slots) {
+                    if (Math.round(slot.x) === x && Math.round(slot.y) === y) {
+                        return { type: 'input', gate: gate, slot: slot };
+                    }
+                }
+                const outSlot = gate.getOutputSlot();
+                if (Math.round(outSlot.x) === x && Math.round(outSlot.y) === y) {
+                    return { type: 'output', gate: gate };
+                }
+            }
+            return null;
+        }
+
+        // Mouse events
+        let isDragging = false;
+        let dragStartPos = null;
+        let connectionStart = null;
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getGridPos(e);
+            if (!isOnBoard(pos.x, pos.y)) return;
+
+            // Check if clicking on a gate
+            const gate = getGateAt(pos.x, pos.y);
+            if (gate) {
+                isDragging = true;
+                dragGate = gate;
+                dragOffsetX = pos.x - gate.x;
+                dragOffsetY = pos.y - gate.y;
+                return;
+            }
+
+            // Check if clicking on a slot for connection
+            const slot = getSlotAt(pos.x, pos.y);
+            if (slot) {
+                if (slot.type === 'output') {
+                    connectionStart = {
+                        x: slot.gate.x,
+                        y: slot.gate.y,
+                        type: 'output',
+                        gate: slot.gate
+                    };
+                    statusEl.textContent = '🔗 Drag to connect to input';
+                    statusEl.style.color = '#00f3ff';
+                } else if (slot.type === 'input') {
+                    // Try to connect from a gate output to this input
+                    // We'll handle this on mouseup
+                    connectionStart = {
+                        x: pos.x,
+                        y: pos.y,
+                        type: 'input',
+                        gate: slot.gate,
+                        slotIndex: slot.slot.index
+                    };
+                }
+                return;
+            }
+
+            // Check if clicking on an input pin
+            const input = INPUTS.find(inp => inp.x === pos.x && inp.y === pos.y);
+            if (input) {
+                connectionStart = {
+                    x: pos.x,
+                    y: pos.y,
+                    type: 'input_pin',
+                    input: input
+                };
+                statusEl.textContent = '🔗 Drag from input to gate input';
+                statusEl.style.color = '#00f3ff';
+                return;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getGridPos(e);
+            
+            if (isDragging && dragGate) {
+                const newX = pos.x - dragOffsetX;
+                const newY = pos.y - dragOffsetY;
+                
+                // Check if valid position
+                if (isOnBoard(newX, newY) && !isOccupied(newX, newY, dragGate.id) && 
+                    !isInput(newX, newY) && !isOutput(newX, newY)) {
+                    dragGate.x = newX;
+                    dragGate.y = newY;
+                    computeCircuit();
+                }
+            }
+
+            // Update connection preview
+            if (connectionStart) {
+                // Show preview
+                draw();
+                const fx = connectionStart.x * GRID_SIZE;
+                const fy = connectionStart.y * GRID_SIZE;
+                const tx = pos.x * GRID_SIZE;
+                const ty = pos.y * GRID_SIZE;
+                
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(fx, fy);
+                ctx.lineTo(tx, ty);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            const pos = getGridPos(e);
+            
+            // Handle gate placement (from toolbar)
+            if (dragGate && dragGate.isNew) {
+                dragGate.isNew = false;
+                dragGate = null;
+                computeCircuit();
+                return;
+            }
+
+            // Handle dragging gate
+            if (isDragging && dragGate) {
+                isDragging = false;
+                dragGate = null;
+                computeCircuit();
+                return;
+            }
+
+            // Handle connection
+            if (connectionStart) {
+                const slot = getSlotAt(pos.x, pos.y);
+                
+                // If connecting from output to input
+                if (connectionStart.type === 'output') {
+                    if (slot && slot.type === 'input' && slot.gate.id !== connectionStart.gate.id) {
+                        // Create wire from output gate to input slot
+                        const wire = {
+                            from: { x: connectionStart.gate.x, y: connectionStart.gate.y },
+                            to: { x: pos.x, y: pos.y }
+                        };
+                        wires.push(wire);
+                        statusEl.textContent = '🔗 Wire connected!';
+                        statusEl.style.color = '#00ff66';
+                        computeCircuit();
+                        
+                        // Check win condition
+                        checkWin();
+                    } else {
+                        statusEl.textContent = '❌ Invalid connection';
+                        statusEl.style.color = '#ff3366';
+                    }
+                }
+                
+                // If connecting from input pin to gate input
+                if (connectionStart.type === 'input_pin') {
+                    if (slot && slot.type === 'input') {
+                        const wire = {
+                            from: { x: connectionStart.x, y: connectionStart.y },
+                            to: { x: pos.x, y: pos.y }
+                        };
+                        wires.push(wire);
+                        statusEl.textContent = '🔗 Input connected!';
+                        statusEl.style.color = '#00ff66';
+                        computeCircuit();
+                        
+                        checkWin();
+                    } else {
+                        statusEl.textContent = '❌ Must connect to gate input';
+                        statusEl.style.color = '#ff3366';
+                    }
+                }
+                
+                connectionStart = null;
+                computeCircuit();
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDragging && dragGate) {
+                isDragging = false;
+                dragGate = null;
+                computeCircuit();
+            }
+            connectionStart = null;
+        });
+
+        // ========================================
+        // 🎯 SELECT GATE FROM TOOLBAR
+        // ========================================
+        function selectGate(type) {
+            // Find a valid position
+            let x = 2, y = 2;
+            let found = false;
+            for (let row = 2; row < ROWS - 2; row++) {
+                for (let col = 2; col < COLS - 2; col++) {
+                    if (!isOccupied(col, row) && !isInput(col, row) && !isOutput(col, row)) {
+                        x = col;
+                        y = row;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            
+            if (!found) {
+                statusEl.textContent = '❌ Board is full!';
+                statusEl.style.color = '#ff3366';
+                return;
+            }
+
+            const gate = new Gate(x, y, type);
+            gates.push(gate);
+            gateCountEl.textContent = gates.length;
+            
+            statusEl.textContent = `✅ ${type} gate placed`;
+            statusEl.style.color = '#00ff66';
+            
+            // Check if we should trigger a malfunction (25% chance when placing)
+            if (malfunctionsEnabled && Math.random() < 0.25) {
+                setTimeout(() => triggerMalfunction(), 500);
+            }
+            
+            computeCircuit();
+            tooltip.classList.add('hidden');
+        }
+
+        // ========================================
+        // 🏆 CHECK WIN CONDITION
+        // ========================================
+        function checkWin() {
+            // Check if output is connected and has a true value
+            const outputConnected = wires.some(wire => 
+                wire.to.x === OUTPUT.x && wire.to.y === OUTPUT.y
+            );
+
+            if (outputConnected && OUTPUT.value) {
+                circuitsCompleted++;
+                circuitsEl.textContent = circuitsCompleted;
+                finalGatesEl.textContent = gates.length;
+                winOverlay.classList.add('show');
+                statusEl.textContent = '🎉 Circuit complete!';
+                statusEl.style.color = '#00ff66';
+            }
+        }
+
+        // ========================================
+        // 🎲 RANDOM PUZZLE
+        // ========================================
+        function randomPuzzle() {
+            resetGame();
+            
+            // Generate random gates
+            const numGates = 3 + Math.floor(Math.random() * 4);
+            const types = ['AND', 'OR', 'NOT', 'AND', 'OR'];
+            
+            for (let i = 0; i < numGates; i++) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                let x, y, attempts = 0;
+                do {
+                    x = 2 + Math.floor(Math.random() * (COLS - 5));
+                    y = 2 + Math.floor(Math.random() * (ROWS - 4));
+                    attempts++;
+                } while ((isOccupied(x, y) || isInput(x, y) || isOutput(x, y)) && attempts < 50);
+                
+                if (!isOccupied(x, y) && !isInput(x, y) && !isOutput(x, y)) {
+                    const gate = new Gate(x, y, type);
+                    gates.push(gate);
+                }
+            }
+            
+            gateCountEl.textContent = gates.length;
+            statusEl.textContent = `🎲 Random puzzle generated (${gates.length} gates)`;
+            statusEl.style.color = '#ffd700';
+            computeCircuit();
+        }
+
+        // ========================================
+        // ⚠️ TOGGLE MALFUNCTIONS
+        // ========================================
+        function toggleMalfunctions() {
+            malfunctionsEnabled = !malfunctionsEnabled;
+            malfStatusEl.textContent = malfunctionsEnabled ? 'ON' : 'OFF';
+            malfStatusEl.style.color = malfunctionsEnabled ? '#ff3366' : '#666';
+            statusEl.textContent = malfunctionsEnabled ? '⚠️ Malfunctions enabled' : '🔧 Malfunctions disabled';
+            statusEl.style.color = malfunctionsEnabled ? '#ffd700' : '#00ff66';
+        }
+
+        // ========================================
+        // 🔄 RESET GAME
+        // ========================================
+        function resetGame() {
+            gates = [];
+            wires = [];
+            gateIdCounter = 0;
+            OUTPUT.value = false;
+            winOverlay.classList.remove('show');
+            gateCountEl.textContent = 0;
+            statusEl.textContent = '🟢 Build a circuit';
+            statusEl.style.color = '#00ff66';
+            computeCircuit();
+        }
+
+        // ========================================
+        // 🔄 AUTO-MALFUNCTION TIMER
+        // ========================================
+        setInterval(() => {
+            if (gates.length > 0 && malfunctionsEnabled && Math.random() < 0.3) {
+                triggerMalfunction();
+            }
+        }, 5000);
+
+        // ========================================
+        // 🚀 START
+        // ========================================
+        computeCircuit();
+    </script>
+
+</body>
+</html>
