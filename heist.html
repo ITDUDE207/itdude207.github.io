@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>💰 Bank Heist</title>
+    <style>
+        body { background: #07090e; color: #00ff66; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; overflow: hidden; user-select: none; }
+        #terminal { width: 420px; background: #0c1017; border: 2px solid #00ff66; padding: 25px; border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,102,0.2); position: relative; transition: transform 0.05s; }
+        #vault-box { position: relative; width: 100%; height: 200px; background: #04060a; border: 1px dashed #333; margin: 20px 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .laser { position: absolute; background: #ff3366; box-shadow: 0 0 8px #ff3366; z-index: 2; }
+        .btn { background: #00ff66; color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; font-family: inherit; font-size: 1.1rem; border-radius: 4px; box-shadow: 0 0 10px #00ff66; z-index: 5; }
+        .btn:active { transform: scale(0.98); }
+        #alert-msg { color: #ff3366; font-weight: bold; min-height: 40px; margin-top: 15px; font-size: 0.9rem; line-height: 1.4; }
+        @keyframes rumble { 0% { transform: translate(0,0); } 20% { transform: translate(-4px,3px); } 40% { transform: translate(4px,-3px); } 60% { transform: translate(-4px,-3px); } 80% { transform: translate(4px,3px); } }
+        .alarm { animation: rumble 0.08s infinite; border-color: #ff3366 !important; box-shadow: 0 0 20px rgba(255,51,102,0.4) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="terminal">
+        <h3 style="color: #00f3ff; margin: 0 0 5px 0;">MAINFRAME VAULT DECRYPTOR</h3>
+        <div style="font-size: 1.8rem; font-weight: bold; color: #ffd700;" id="loot">$0</div>
+        
+        <div id="vault-box" onmousemove="checkLasers(e)">
+            <button class="btn" id="vault-btn" onclick="steal()">DRAIN FUNDS</button>
+            <div id="l1" class="laser" style="width: 100%; height: 3px; top: 0; left: 0;"></div>
+            <div id="l2" class="laser" style="width: 3px; height: 100%; top: 0; left: 0;"></div>
+        </div>
+
+        <div id="alert-msg">Security mesh grid: INACTIVE. Tap to syphon cash.</div>
+    </div>
+
+    <script>
+        const lootDisp = document.getElementById('loot'), msg = document.getElementById('alert-msg'), term = document.getElementById('terminal'), vBox = document.getElementById('vault-box'), vBtn = document.getElementById('vault-btn');
+        const l1 = document.getElementById('l1'), l2 = document.getElementById('l2');
+        
+        let stash = 0, audioCtx = null, l1Y = 0, l2X = 0, l1Dir = 2, l2Dir = 3, compromised = false;
+
+        const roasts = [
+            "🚨 ALARM ENERGIZED! Your clumsy cursor clipped a perimeter beam.",
+            "🚨 BYPASS FAILED! Bank AI caught you lagging down the coordinate tracking lines.",
+            "🚨 SECURITY BREACH! You moved like an amateur chatbot. Funds seized.",
+            "🚨 REJECTED! Laser grid scanned your hand movement and locked down the safe."
+        ];
+
+        function playSynth(freq, duration, type='sine') {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = type; o.frequency.value = freq;
+                if(type === 'sawtooth') o.frequency.linearRampToValueAtTime(freq/3, audioCtx.currentTime + duration);
+                g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function steal() {
+            if (compromised) return;
+            stash += 250000;
+            lootDisp.innerText = "$" + stash.toLocaleString();
+            msg.innerText = "💸 SYPHONING PACKETS... Keep dodging active security grid lines!";
+            msg.style.color = "#00ff66";
+            playSynth(800 + (stash / 500000), 0.08, 'sine');
+        }
+
+        // 🧠 Laser Traversal Coordinate Loop
+        function updateLasers() {
+            // Shifting barrier coordinate ranges continuously
+            l1Y += l1Dir;
+            if (l1Y <= 0 || l1Y >= vBox.clientHeight - 3) l1Dir *= -1;
+            l1.style.top = l1Y + 'px';
+
+            l2X += l2Dir;
+            if (l2X <= 0 || l2X >= vBox.clientWidth - 3) l2Dir *= -1;
+            l2.style.left = l2X + 'px';
+
+            // Increase laser speeds dynamically as your stolen vault totals scale upward
+            const scalar = 2 + (stash / 1000000);
+            l1Dir = Math.sign(l1Dir) * scalar;
+            l2Dir = Math.sign(l2Dir) * (scalar + 1);
+
+            requestAnimationFrame(updateLasers);
+        }
+        requestAnimationFrame(updateLasers);
+
+        // 🔬 Intercept Mouse Alignment Matrix
+        function checkLasers(e) {
+            if (compromised || stash === 0) return;
+
+            const rect = vBox.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            // Geometric intersection tests checking if mouse lines cross moving elements
+            if (Math.abs(my - l1Y) < 8 || Math.abs(mx - l2X) < 8) {
+                compromised = true;
+                stash = 0;
+                lootDisp.innerText = "$0";
+                
+                term.className = "alarm";
+                msg.style.color = "#ff3366";
+                msg.innerText = roasts[Math.floor(Math.random() * roasts.length)];
+                
+                playSynth(120, 0.4, 'sawtooth');
+                vBtn.disabled = true;
+
+                // Lock interface down temporarily out of spite
+                setTimeout(() => {
+                    term.className = "";
+                    msg.innerText = "Mainframe reset complete. Retry heist sequence.";
+                    msg.style.color = "#00f3ff";
+                    compromised = false;
+                    vBtn.disabled = false;
+                }, 2500);
+            }
+        }
+
+        vBox.addEventListener('mousemove', checkLasers);
+    </script>
+</body>
+</html>
