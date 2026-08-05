@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔦 Laser Reflector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: #0a0a12;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #ff0055;
+            text-shadow: 0 0 20px #ff0055;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        .subtitle span { color: #00f3ff; }
+
+        /* 🎮 GAME CONTAINER */
+        #game {
+            position: relative;
+            background: #0d0d18;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        #canvas {
+            display: block;
+            border-radius: 6px;
+            cursor: crosshair;
+        }
+
+        /* 📊 HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 600px;
+            margin: 12px 0;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .hud .score { color: #00ff66; }
+        .hud .moves { color: #00f3ff; }
+        .hud .status { color: #ffd700; }
+
+        /* 🎛️ CONTROLS */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #1a1a2e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #2a2a4e;
+            color: #fff;
+        }
+
+        .btn.reset { background: #2a1a1a; border-color: #ff0055; color: #ff0055; }
+        .btn.reset:hover { background: #3a1a1a; box-shadow: 0 0 15px rgba(255,0,85,0.2); }
+
+        .btn.place { background: #1a2a1a; border-color: #00ff66; color: #00ff66; }
+        .btn.place:hover { background: #1a3a1a; box-shadow: 0 0 15px rgba(0,255,102,0.2); }
+
+        .btn.random { background: #1a1a2a; border-color: #ffd700; color: #ffd700; }
+        .btn.random:hover { background: #2a2a3a; box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+
+        /* 🏆 WIN OVERLAY */
+        #win-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            z-index: 10;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #win-overlay.show { display: flex; }
+        #win-overlay h2 {
+            font-size: 3rem;
+            color: #00ff66;
+            text-shadow: 0 0 30px #00ff66;
+            margin-bottom: 10px;
+        }
+        #win-overlay p {
+            color: #aaa;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        #win-overlay .btn {
+            background: #00ff66;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        #win-overlay .btn:hover { background: #00cc55; box-shadow: 0 0 20px #00ff66; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 💡 INSTRUCTION TOOLTIP */
+        .tooltip {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,243,255,0.1);
+            border: 1px solid rgba(0,243,255,0.3);
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #666;
+            pointer-events: none;
+            white-space: nowrap;
+            transition: opacity 0.5s;
+        }
+        .tooltip.hidden { opacity: 0; }
+    </style>
+</head>
+<body>
+
+    <h1>🔦 LASER REFLECTOR</h1>
+    <div class="subtitle">Place mirrors to guide the <span>laser</span> to the <span style="color:#ff0055;">target</span></div>
+
+    <div class="hud">
+        <span class="score">🎯 Hits: <span id="hits">0</span></span>
+        <span class="moves">🔄 Mirrors: <span id="mirrors">0</span></span>
+        <span class="status" id="status">🟢 Place a mirror</span>
+    </div>
+
+    <div id="game">
+        <canvas id="canvas" width="600" height="500"></canvas>
+        <div id="win-overlay">
+            <h2>🎉 TARGET HIT!</h2>
+            <p>You used <span id="final-mirrors">0</span> mirrors to reflect the laser!</p>
+            <button class="btn" onclick="resetGame()">🔄 Play Again</button>
+        </div>
+        <div class="tooltip" id="tooltip">💡 Click on the grid to place a mirror</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn place" onclick="togglePlaceMode()">🔲 Place Mirror</button>
+        <button class="btn random" onclick="randomMirrors()">🎲 Random Chaos</button>
+        <button class="btn reset" onclick="resetGame()">🗑️ Clear All</button>
+        <button class="btn" onclick="toggleAutoRotate()">🔄 Auto-Rotate: <span id="auto-status">OFF</span></button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = 600, H = 500;
+
+        // 🎯 GAME STATE
+        const COLS = 12, ROWS = 10;
+        const CELL_SIZE = W / COLS;
+
+        let grid = [];
+        let laserPath = [];
+        let mirrorCount = 0;
+        let hitCount = 0;
+        let isPlacing = true;
+        let autoRotate = false;
+        let autoRotateInterval = null;
+
+        // 🏷️ DOM elements
+        const hitsEl = document.getElementById('hits');
+        const mirrorsEl = document.getElementById('mirrors');
+        const statusEl = document.getElementById('status');
+        const finalMirrorsEl = document.getElementById('final-mirrors');
+        const winOverlay = document.getElementById('win-overlay');
+        const tooltip = document.getElementById('tooltip');
+        const autoStatus = document.getElementById('auto-status');
+
+        // 📐 MIRROR ORIENTATIONS
+        // 0 = "/" (NE-SW), 1 = "\" (NW-SE)
+        const MIRROR_ANGLES = ['/', '\\'];
+
+        // 🎯 TARGET POSITION (randomized)
+        let targetX = 8, targetY = 5;
+
+        // 🧹 INITIALIZE GRID
+        function initGrid() {
+            grid = [];
+            for (let y = 0; y < ROWS; y++) {
+                grid[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    grid[y][x] = null; // null = empty, '/' = mirror, '\' = mirror
+                }
+            }
+            // Place target
+            targetX = Math.floor(Math.random() * (COLS - 2)) + 1;
+            targetY = Math.floor(Math.random() * (ROWS - 2)) + 1;
+            laserPath = [];
+            mirrorCount = 0;
+            hitCount = 0;
+            updateHUD();
+            winOverlay.classList.remove('show');
+            draw();
+        }
+
+        // 🔦 CALCULATE LASER PATH
+        function calculateLaser() {
+            laserPath = [];
+            let x = 0, y = Math.floor(ROWS / 2);
+            let dx = 1, dy = 0; // Moving right
+
+            let visited = new Set();
+            let maxSteps = 200;
+            let hitTarget = false;
+
+            while (maxSteps-- > 0) {
+                const key = `${x},${y},${dx},${dy}`;
+                if (visited.has(key)) break;
+                visited.add(key);
+
+                // Check if we hit the target
+                if (x === targetX && y === targetY) {
+                    hitTarget = true;
+                    laserPath.push({ x, y, hit: true });
+                    break;
+                }
+
+                // Check if we're out of bounds
+                if (x < 0 || x >= COLS || y < 0 || y >= ROWS) {
+                    laserPath.push({ x, y, outOfBounds: true });
+                    break;
+                }
+
+                laserPath.push({ x, y, hit: false });
+
+                // Check if there's a mirror at current position
+                const mirror = grid[y]?.[x];
+                if (mirror) {
+                    // Reflect the laser
+                    if (mirror === '/') {
+                        // / mirror: (dx, dy) -> (-dy, -dx)
+                        [dx, dy] = [-dy, -dx];
+                    } else if (mirror === '\\') {
+                        // \ mirror: (dx, dy) -> (dy, dx)
+                        [dx, dy] = [dy, dx];
+                    }
+                }
+
+                // Move forward
+                x += dx;
+                y += dy;
+            }
+
+            return { hit: hitTarget, path: laserPath };
+        }
+
+        // 🎨 DRAW EVERYTHING
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, H);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(W, i * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw mirrors
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const mirror = grid[y]?.[x];
+                    if (mirror) {
+                        const cx = x * CELL_SIZE + CELL_SIZE/2;
+                        const cy = y * CELL_SIZE + CELL_SIZE/2;
+                        const size = CELL_SIZE * 0.35;
+
+                        ctx.save();
+                        ctx.translate(cx, cy);
+
+                        // Glow
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, CELL_SIZE * 0.6);
+                        gradient.addColorStop(0, 'rgba(0, 243, 255, 0.15)');
+                        gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(-CELL_SIZE/2, -CELL_SIZE/2, CELL_SIZE, CELL_SIZE);
+
+                        // Mirror line
+                        ctx.strokeStyle = '#00f3ff';
+                        ctx.lineWidth = 2;
+                        ctx.shadowColor = '#00f3ff';
+                        ctx.shadowBlur = 8;
+
+                        if (mirror === '/') {
+                            ctx.beginPath();
+                            ctx.moveTo(-size, size);
+                            ctx.lineTo(size, -size);
+                            ctx.stroke();
+                        } else {
+                            ctx.beginPath();
+                            ctx.moveTo(-size, -size);
+                            ctx.lineTo(size, size);
+                            ctx.stroke();
+                        }
+
+                        ctx.shadowBlur = 0;
+
+                        // Small label
+                        ctx.fillStyle = 'rgba(0, 243, 255, 0.3)';
+                        ctx.font = '8px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(mirror, 0, size + 4);
+
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // Draw target
+            const tx = targetX * CELL_SIZE + CELL_SIZE/2;
+            const ty = targetY * CELL_SIZE + CELL_SIZE/2;
+            
+            // Target glow
+            const targetGlow = ctx.createRadialGradient(tx, ty, 0, tx, ty, CELL_SIZE * 0.8);
+            targetGlow.addColorStop(0, 'rgba(255, 0, 85, 0.4)');
+            targetGlow.addColorStop(1, 'rgba(255, 0, 85, 0)');
+            ctx.fillStyle = targetGlow;
+            ctx.beginPath();
+            ctx.arc(tx, ty, CELL_SIZE * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Target icon
+            ctx.fillStyle = '#ff0055';
+            ctx.shadowColor = '#ff0055';
+            ctx.shadowBlur = 20;
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🎯', tx, ty + 2);
+            ctx.shadowBlur = 0;
+
+            // Draw laser path
+            const result = calculateLaser();
+            const path = result.path;
+
+            if (path.length > 0) {
+                // Draw laser beam glow
+                for (let i = 0; i < path.length; i++) {
+                    const p = path[i];
+                    if (p.outOfBounds) break;
+                    if (p.hit) {
+                        // Hit animation - big glow
+                        const hx = p.x * CELL_SIZE + CELL_SIZE/2;
+                        const hy = p.y * CELL_SIZE + CELL_SIZE/2;
+                        const glow = ctx.createRadialGradient(hx, hy, 0, hx, hy, CELL_SIZE * 1.2);
+                        glow.addColorStop(0, 'rgba(0, 255, 102, 0.6)');
+                        glow.addColorStop(0.5, 'rgba(0, 255, 102, 0.2)');
+                        glow.addColorStop(1, 'rgba(0, 255, 102, 0)');
+                        ctx.fillStyle = glow;
+                        ctx.beginPath();
+                        ctx.arc(hx, hy, CELL_SIZE * 1.2, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    }
+
+                    const px = p.x * CELL_SIZE + CELL_SIZE/2;
+                    const py = p.y * CELL_SIZE + CELL_SIZE/2;
+
+                    // Laser beam core
+                    const alpha = 0.3 + (i / path.length) * 0.5;
+                    ctx.fillStyle = `rgba(255, 0, 85, ${alpha * 0.3})`;
+                    ctx.shadowColor = '#ff0055';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(px, py, CELL_SIZE * 0.15, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bright center
+                    ctx.shadowBlur = 30;
+                    ctx.fillStyle = `rgba(255, 100, 150, ${alpha * 0.6})`;
+                    ctx.beginPath();
+                    ctx.arc(px, py, CELL_SIZE * 0.06, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Draw connecting lines between path points
+                ctx.shadowBlur = 0;
+                for (let i = 0; i < path.length - 1; i++) {
+                    const p1 = path[i];
+                    const p2 = path[i + 1];
+                    if (p1.outOfBounds || p2.outOfBounds) break;
+                    if (p1.hit || p2.hit) break;
+
+                    const x1 = p1.x * CELL_SIZE + CELL_SIZE/2;
+                    const y1 = p1.y * CELL_SIZE + CELL_SIZE/2;
+                    const x2 = p2.x * CELL_SIZE + CELL_SIZE/2;
+                    const y2 = p2.y * CELL_SIZE + CELL_SIZE/2;
+
+                    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                    gradient.addColorStop(0, `rgba(255, 0, 85, 0.2)`);
+                    gradient.addColorStop(0.5, `rgba(255, 100, 150, 0.4)`);
+                    gradient.addColorStop(1, `rgba(255, 0, 85, 0.2)`);
+                    
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 2;
+                    ctx.shadowColor = '#ff0055';
+                    ctx.shadowBlur = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // Update HUD based on laser result
+            if (result.hit) {
+                hitCount++;
+                hitsEl.textContent = hitCount;
+                statusEl.textContent = '🎯 TARGET HIT!';
+                statusEl.style.color = '#00ff66';
+                
+                // Show win overlay after a moment
+                setTimeout(() => {
+                    finalMirrorsEl.textContent = mirrorCount;
+                    winOverlay.classList.add('show');
+                }, 300);
+            } else {
+                statusEl.textContent = isPlacing ? '🟢 Click to place a mirror' : '🟡 Click to place a mirror';
+                statusEl.style.color = isPlacing ? '#00ff66' : '#ffd700';
+            }
+
+            // Update tooltip
+            if (mirrorCount > 0) {
+                tooltip.classList.add('hidden');
+            } else {
+                tooltip.classList.remove('hidden');
+            }
+        }
+
+        // 🖱️ HANDLE CLICK
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            const col = Math.floor(mx / CELL_SIZE);
+            const row = Math.floor(my / CELL_SIZE);
+
+            if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
+            if (col === targetX && row === targetY) {
+                statusEl.textContent = '❌ Cannot place mirror on target!';
+                statusEl.style.color = '#ff0055';
+                return;
+            }
+
+            // Check if we're placing or removing
+            if (grid[row]?.[col]) {
+                // Remove mirror
+                grid[row][col] = null;
+                mirrorCount--;
+                statusEl.textContent = '🗑️ Mirror removed';
+                statusEl.style.color = '#ffd700';
+            } else {
+                // Place mirror with random orientation
+                const angle = Math.random() < 0.5 ? '/' : '\\';
+                grid[row][col] = angle;
+                mirrorCount++;
+                statusEl.textContent = `✅ Mirror placed (${angle})`;
+                statusEl.style.color = '#00ff66';
+
+                // 🎲 FUN TWIST: Randomly rotate nearby mirrors!
+                if (Math.random() < 0.3) {
+                    chaosRotate(row, col);
+                }
+            }
+
+            updateHUD();
+            draw();
+        });
+
+        // 🎲 CHAOS ROTATE - Randomly rotate nearby mirrors!
+        function chaosRotate(row, col) {
+            const directions = [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1],           [0, 1],
+                [1, -1],  [1, 0],  [1, 1]
+            ];
+
+            // Shuffle directions
+            directions.sort(() => Math.random() - 0.5);
+
+            for (const [dr, dc] of directions) {
+                const nr = row + dr, nc = col + dc;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr]?.[nc]) {
+                    // Flip the mirror orientation
+                    grid[nr][nc] = grid[nr][nc] === '/' ? '\\' : '/';
+                    statusEl.textContent = `🌀 Chaos! Nearby mirror flipped!`;
+                    statusEl.style.color = '#ffd700';
+                    return; // Only flip one to keep it manageable
+                }
+            }
+        }
+
+        // 🔄 TOGGLE PLACE MODE
+        function togglePlaceMode() {
+            isPlacing = !isPlacing;
+            statusEl.textContent = isPlacing ? '🟢 Place mode: click to add mirrors' : '🔴 Remove mode: click to remove mirrors';
+            statusEl.style.color = isPlacing ? '#00ff66' : '#ff3366';
+        }
+
+        // 🎲 RANDOM CHAOS - Place random mirrors everywhere!
+        function randomMirrors() {
+            if (mirrorCount > 0) {
+                if (!confirm('⚠️ This will clear all mirrors and place random ones. Continue?')) return;
+            }
+            
+            // Clear all
+            initGrid();
+            
+            // Place random mirrors
+            const numMirrors = Math.floor(Math.random() * 15) + 5;
+            for (let i = 0; i < numMirrors; i++) {
+                let x = Math.floor(Math.random() * COLS);
+                let y = Math.floor(Math.random() * ROWS);
+                // Avoid target
+                if (x === targetX && y === targetY) continue;
+                // Avoid laser start area
+                if (x === 0) continue;
+                grid[y][x] = Math.random() < 0.5 ? '/' : '\\';
+                mirrorCount++;
+            }
+            
+            statusEl.textContent = `🎲 ${numMirrors} random mirrors placed!`;
+            statusEl.style.color = '#ffd700';
+            updateHUD();
+            draw();
+        }
+
+        // 🔄 AUTO-ROTATE TOGGLE
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            autoStatus.textContent = autoRotate ? 'ON' : 'OFF';
+            autoStatus.style.color = autoRotate ? '#00ff66' : '#888';
+
+            if (autoRotate) {
+                autoRotateInterval = setInterval(() => {
+                    // Randomly flip a mirror
+                    const mirrors = [];
+                    for (let y = 0; y < ROWS; y++) {
+                        for (let x = 0; x < COLS; x++) {
+                            if (grid[y]?.[x]) mirrors.push({x, y});
+                        }
+                    }
+                    if (mirrors.length > 0) {
+                        const m = mirrors[Math.floor(Math.random() * mirrors.length)];
+                        grid[m.y][m.x] = grid[m.y][m.x] === '/' ? '\\' : '/';
+                        statusEl.textContent = '🌀 Auto-Rotate: Mirror flipped!';
+                        statusEl.style.color = '#ffd700';
+                        draw();
+                    }
+                }, 3000);
+            } else {
+                clearInterval(autoRotateInterval);
+            }
+        }
+
+        // 📊 UPDATE HUD
+        function updateHUD() {
+            hitsEl.textContent = hitCount;
+            mirrorsEl.textContent = mirrorCount;
+        }
+
+        // 🔄 RESET GAME
+        function resetGame() {
+            clearInterval(autoRotateInterval);
+            autoRotate = false;
+            autoStatus.textContent = 'OFF';
+            autoStatus.style.color = '#888';
+            initGrid();
+            statusEl.textContent = '🟢 New game! Place mirrors to guide the laser.';
+            statusEl.style.color = '#00ff66';
+            winOverlay.classList.remove('show');
+            draw();
+        }
+
+        // 🎨 MOUSE MOVE HOVER EFFECT
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            const col = Math.floor(mx / CELL_SIZE);
+            const row = Math.floor(my / CELL_SIZE);
+
+            // Redraw with hover highlight
+            draw();
+
+            if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
+                const cx = col * CELL_SIZE;
+                const cy = row * CELL_SIZE;
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+                
+                if (grid[row]?.[col]) {
+                    ctx.strokeStyle = 'rgba(255, 0, 85, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(cx, cy, CELL_SIZE, CELL_SIZE);
+                } else if (col !== targetX || row !== targetY) {
+                    ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(cx, cy, CELL_SIZE, CELL_SIZE);
+                }
+            }
+        });
+
+        // 🚀 START
+        initGrid();
+        draw();
+    </script>
+
+</body>
+</html>
