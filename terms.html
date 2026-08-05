@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📜 Terms of Service</title>
+    <style>
+        body { background: #0c0d12; color: #fff; font-family: monospace; text-align: center; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; overflow: hidden; }
+        #wrapper { width: 380px; background: #12121a; border: 2px solid #333; padding: 20px; border-radius: 8px; box-shadow: 0 10px 30px #000; }
+        #scroll-box { height: 150px; overflow-y: scroll; background: #07070a; border: 1px solid #444; padding: 12px; text-align: left; font-size: 0.8rem; line-height: 1.4; color: #aaa; margin-bottom: 15px; }
+        .btn { background: #00ff66; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit; width: 100%; transition: transform 0.1s; }
+        .clause { color: #ff3366; font-weight: bold; display: block; margin: 8px 0; font-size: 0.75rem; padding-left: 4px; border-left: 2px solid #ff3366; }
+        @keyframes rattle { 0%{transform:translate(0,0);} 20%{transform:translate(-2px,2px);} 40%{transform:translate(2px,-2px);} 60%{transform:translate(-2px,-2px);} 80%{transform:translate(2px,2px);} }
+        .shake { animation: rattle 0.08s infinite; }
+    </style>
+</head>
+<body>
+
+    <div id="wrapper">
+        <h3 style="color: #00f3ff; margin: 0 0 10px 0;">PRIVACY PROTOCOL V4</h3>
+        <div id="scroll-box" onscroll="track()">
+            <p>Please inspect the system configuration parameters by scrolling downwards continuously to authorize the deployment matrix layout fields...</p>
+            <div id="clauses"></div>
+            <p style="margin-top: 120px;">[END OF MEMORY RECORD TRACK]</p>
+        </div>
+        <button class="btn" id="btn" onmouseenter="dodge()" onclick="agree()">AGREE & CONTINUE</button>
+    </div>
+
+    <script>
+        const sbox = document.getElementById('scroll-box'), cbox = document.getElementById('clauses'), btn = document.getElementById('btn'), wrap = document.getElementById('wrapper');
+        let idx = 0, ticks = 0, ac = null;
+
+        const traps = [
+            "⚠️ CLAUSE 12: User agrees to surrender all chocolate biscuits to the browser cache.",
+            "🚨 CLAUSE 24: High scroll velocity detected. What are you trying to hide?",
+            "⚠️ CLAUSE 42: Continuing implies you authorize the layout to mock your design tastes.",
+            "🚨 CLAUSE 89: System experiences contract paranoia. All previous rules are inverted."
+        ];
+
+        function snd(f) {
+            try {
+                if (!ac) ac = new(window.AudioContext||window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sawtooth'; o.frequency.value = f; g.gain.setValueAtTime(0.03, ac.currentTime);
+                o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.08);
+            } catch(e) {}
+        }
+
+        function track() {
+            if (++ticks % 10 === 0 && idx < traps.length) {
+                snd(160); wrap.className = "shake"; setTimeout(() => wrap.className = "", 100);
+                const sp = Object.assign(document.createElement('span'), { className: 'clause', innerText: traps[idx++] });
+                cbox.appendChild(sp);
+            }
+        }
+
+        function dodge() {
+            if (idx < traps.length || sbox.scrollTop < 80) {
+                snd(400); btn.style.background = "#ff3366"; btn.innerText = "READ THE CONTRACT!"; return;
+            }
+            if (Math.random() > 0.3) {
+                snd(280); btn.style.background = "#ffd700"; btn.innerText = "ARE YOU 100% SURE?";
+                btn.style.transform = `translate(${Math.random()*60-30}px, ${Math.random()*30-15}px)`;
+            }
+        }
+
+        function agree() {
+            if (idx >= traps.length && sbox.scrollTop >= 80) {
+                alert("🏆 CONTRACT SIGNED!\nAccess authorized despite deep system paranoia.");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
