@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>💥 Shatter Layout</title>
+    <style>
+        body, html { margin: 0; padding: 0; background: #f4f6f9; font-family: system-ui, sans-serif; height: 100%; overflow: hidden; }
+        #canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
+        .page { max-width: 600px; margin: 40px auto; padding: 20px; }
+        /* 🏢 TARGET EXPLOSIVE LAYOUT CONTAINERS */
+        .shatter-target { background: #fff; border: 1px solid #dcdfe6; padding: 15px; margin-bottom: 15px; border-radius: 6px; cursor: pointer; transition: opacity 0.1s; }
+        .shatter-target:hover { border-color: #f56c6c; background: #fef0f0; }
+        h1, h3 { margin-top: 0; color: #303133; }
+        p { color: #606266; font-size: 0.95rem; line-height: 1.5; }
+        .alert { background: #ecf5ff; border-color: #b3d8ff; color: #409eff; }
+    </style>
+</head>
+<body>
+
+    <!-- 🌌 PHYSICAL PARTICLE RENDERING FRAME -->
+    <canvas id="canvas"></canvas>
+
+    <!-- THE MOCK CORPORATE SITE WRAPPER -->
+    <div class="page">
+        <div class="shatter-target" style="text-align: center;">
+            <h1 style="margin:0;">CORPORATE INTRANET</h1>
+            <p style="margin:5px 0 0 0; font-size:0.85rem; color:#909399;">PROTOCOL BLOCK V3 // CLICK OR HOVER SECURE FILES</p>
+        </div>
+
+        <div class="shatter-target alert">
+            <h3>⚠️ SECURITY NOTICE</h3>
+            <p>Database synchronization matrices are currently operating under strict sandbox protocols. Do not compromise structural document boundaries.</p>
+        </div>
+
+        <div class="shatter-target">
+            <h3>📂 Financial_Report_2026.csv</h3>
+            <p>Contains absolute encryption tokens and quarterly ledger totals compiled by automated budget crawlers.</p>
+        </div>
+
+        <div class="shatter-target">
+            <h3>🔑 Master_Access_Keys.txt</h3>
+            <p>Emergency cloud configuration infrastructure login details. Restricted profile access alignment mandatory.</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H, particles = [], audioCtx = null;
+
+        function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        function playCrash() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Custom explosive synthesizer slide math
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sawtooth'; o.frequency.setValueAtTime(150, audioCtx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+                g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.3);
+            } catch(e) {}
+        }
+
+        // 🧠 Core Cellular Fracture Converter Engine
+        function shatter(el) {
+            if (el.style.opacity === '0') return;
+            playCrash();
+
+            // 1. Unpack physical document layout boundaries and color states
+            const rect = el.getBoundingClientRect();
+            const color = window.getComputedStyle(el).backgroundColor;
+            const txtColor = window.getComputedStyle(el).color;
+
+            // Hide the actual live document container node from view instantly
+            el.style.opacity = '0';
+            el.style.pointerEvents = 'none';
+
+            // 2. Generate a grid of miniature debris chunks across element boundaries
+            const size = 10; 
+            for (let y = rect.top; y < rect.bottom; y += size) {
+                for (let x = rect.left; x < rect.right; x += size) {
+                    particles.push({
+                        x: x, y: y,
+                        w: size - 1, h: size - 1,
+                        // Explosive drift vectors: push particles outwards from center bounds
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8 - 3,
+                        color: Math.random() > 0.3 ? color : txtColor
+                    });
+                }
+            }
+        }
+
+        // 🧮 Gravity and Vector Acceleration Loop
+        function loop() {
+            ctx.clearRect(0, 0, W, H);
+
+            particles.forEach((p, idx) => {
+                p.vy += 0.35; // Apply constant vertical gravitational acceleration scalar
+                p.x += p.vx; p.y += p.vy;
+
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+
+                // Garbage Collection: Delete debris blocks once they drop past the window floor boundary
+                if (p.y > H) particles.splice(idx, 1);
+            });
+
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+
+        // Intercept cursor coordinate contact lines globally
+        document.querySelectorAll('.shatter-target').forEach(el => {
+            el.addEventListener('mouseenter', () => shatter(el));
+        });
+    </script>
+</body>
+</html>
