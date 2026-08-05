@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖥️ Simulated PC</title>
+    <title>🖥️ Simulated PC Pro</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
         body {
@@ -17,8 +17,8 @@
         }
 
         #monitor {
-            width: 960px;
-            height: 680px;
+            width: 1024px;
+            height: 720px;
             background: #0a0a12;
             border: 12px solid #2a2a3a;
             border-radius: 12px;
@@ -56,8 +56,8 @@
             background: #1e1e2e;
             border: 1px solid #3a3a4a;
             border-radius: 6px;
-            min-width: 250px;
-            min-height: 150px;
+            min-width: 280px;
+            min-height: 180px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             display: none;
             flex-direction: column;
@@ -90,17 +90,21 @@
         }
         .window-header .close-btn:hover { transform: scale(1.1); }
         .window-body {
-            padding: 15px;
+            padding: 12px 15px;
             flex: 1;
             color: #ccc;
             font-size: 0.9rem;
             overflow: auto;
         }
+        .window-body::-webkit-scrollbar { width: 4px; }
+        .window-body::-webkit-scrollbar-track { background: #0a0a12; }
+        .window-body::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
-        /* 📝 NOTEPAD APP */
+        /* 📝 NOTEPAD */
+        #notepad { width: 480px; min-height: 320px; }
         #notepad textarea {
             width: 100%;
-            height: 220px;
+            height: 200px;
             background: #0a0a12;
             color: #00ff66;
             border: 1px solid #333;
@@ -122,7 +126,8 @@
         }
         .notepad-status .file-name { color: #00f3ff; }
 
-        /* 🧮 CALCULATOR APP */
+        /* 🧮 CALCULATOR */
+        #calculator { width: 280px; }
         #calculator .calc-display {
             background: #0a0a12;
             color: #00f3ff;
@@ -157,14 +162,11 @@
         .calc-grid .eq:hover { background: #00cc55; }
 
         /* 📁 FILE EXPLORER */
-        #explorer {
-            width: 480px;
-            min-height: 350px;
-        }
+        #explorer { width: 540px; min-height: 400px; }
         .explorer-toolbar {
             display: flex;
             gap: 6px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
         }
         .explorer-toolbar button {
@@ -180,11 +182,17 @@
         }
         .explorer-toolbar button:hover { background: #3a3a5e; color: #fff; }
         .explorer-toolbar .danger:hover { background: #550a1a; border-color: #ff0055; color: #ff0055; }
+        .explorer-path {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+        }
         .file-list {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            max-height: 220px;
+            gap: 8px;
+            max-height: 200px;
             overflow-y: auto;
             padding: 4px;
         }
@@ -193,7 +201,7 @@
         .file-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
         .file-item {
             background: #0a0a12;
-            padding: 15px 10px;
+            padding: 12px 8px;
             text-align: center;
             border-radius: 4px;
             border: 1px solid #333;
@@ -203,7 +211,7 @@
         }
         .file-item:hover { background: #1a1a2e; border-color: #00f3ff; }
         .file-item .icon { font-size: 1.8rem; display: block; }
-        .file-item .name { font-size: 0.7rem; color: #888; margin-top: 4px; word-break: break-all; }
+        .file-item .name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; }
         .file-item .delete-btn {
             position: absolute;
             top: 2px;
@@ -225,6 +233,134 @@
             padding: 30px 0;
             font-size: 0.9rem;
         }
+        .folder-item { border-color: #1a3a5e; }
+        .folder-item:hover { border-color: #00f3ff; }
+
+        /* 🖼️ IMAGE VIEWER */
+        #imageviewer { width: 500px; min-height: 400px; }
+        #imageviewer .image-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #imageviewer .image-container img {
+            max-width: 100%;
+            max-height: 350px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #0a0a12;
+        }
+        #imageviewer .image-container .upload-area {
+            width: 100%;
+            padding: 20px;
+            border: 2px dashed #333;
+            border-radius: 4px;
+            text-align: center;
+            color: #666;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        #imageviewer .image-container .upload-area:hover { border-color: #00f3ff; }
+        #imageviewer .image-container .upload-area input { display: none; }
+        #imageviewer .image-container .image-info {
+            font-size: 0.7rem;
+            color: #666;
+            text-align: center;
+        }
+
+        /* 🌐 BROWSER */
+        #browser { width: 600px; min-height: 450px; }
+        #browser .browser-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        #browser .browser-bar input {
+            flex: 1;
+            padding: 6px 10px;
+            background: #0a0a12;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        #browser .browser-bar input:focus { border-color: #00f3ff; }
+        #browser .browser-bar button {
+            background: #2a2a3e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        #browser .browser-bar button:hover { background: #3a3a5e; color: #fff; }
+        #browser .browser-frame {
+            width: 100%;
+            height: 320px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #browser .browser-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 🎵 MEDIA PLAYER */
+        #mediaplayer { width: 420px; min-height: 300px; }
+        #mediaplayer .player-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        #mediaplayer .player-container audio {
+            width: 100%;
+            background: #0a0a12;
+            border-radius: 4px;
+        }
+        #mediaplayer .player-container .upload-area {
+            width: 100%;
+            padding: 15px;
+            border: 2px dashed #333;
+            border-radius: 4px;
+            text-align: center;
+            color: #666;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        #mediaplayer .player-container .upload-area:hover { border-color: #00ff66; }
+        #mediaplayer .player-container .upload-area input { display: none; }
+        #mediaplayer .player-container .track-info {
+            font-size: 0.8rem;
+            color: #888;
+            text-align: center;
+        }
+        #mediaplayer .player-container .controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        #mediaplayer .player-container .controls button {
+            background: #2a2a3e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 6px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        #mediaplayer .player-container .controls button:hover { background: #3a3a5e; color: #fff; }
+        #mediaplayer .player-container .controls button.active { background: #00ff66; color: #000; }
 
         /* 🗄️ TASKBAR */
         #taskbar {
@@ -251,6 +387,7 @@
             font-size: 0.75rem;
             font-family: inherit;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         #taskbar .task-btn:hover { background: #3a3a5e; color: #fff; }
         #taskbar .task-btn.active { background: #3a3a5e; color: #00f3ff; border-color: #00f3ff; }
@@ -280,7 +417,7 @@
         #boot-screen .bar-fill { height: 100%; width: 0%; background: #00ff66; transition: width 0.1s; }
         #boot-screen .status { margin-top: 15px; font-size: 0.8rem; color: #888; }
 
-        /* 📝 NEW FILE MODAL */
+        /* 📝 MODAL */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -297,11 +434,11 @@
             border: 1px solid #3a3a4a;
             border-radius: 8px;
             padding: 25px;
-            width: 350px;
+            width: 380px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         }
         .modal-box h3 { color: #00f3ff; margin-bottom: 10px; }
-        .modal-box input {
+        .modal-box input, .modal-box select {
             width: 100%;
             padding: 10px;
             background: #0a0a12;
@@ -311,13 +448,14 @@
             font-family: inherit;
             font-size: 0.9rem;
             outline: none;
-            margin: 10px 0;
+            margin: 8px 0;
         }
-        .modal-box input:focus { border-color: #00f3ff; }
+        .modal-box input:focus, .modal-box select:focus { border-color: #00f3ff; }
         .modal-box .modal-actions {
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+            margin-top: 12px;
         }
         .modal-box .modal-actions button {
             padding: 6px 20px;
@@ -356,18 +494,27 @@
             <div class="desktop-icon" style="left:20px; top:200px;" onclick="openWindow('explorer')">
                 <span class="icon">📁</span>Files
             </div>
-            <div class="desktop-icon" style="left:20px; top:290px;" onclick="openWindow('about')">
+            <div class="desktop-icon" style="left:20px; top:290px;" onclick="openWindow('imageviewer')">
+                <span class="icon">🖼️</span>Images
+            </div>
+            <div class="desktop-icon" style="left:120px; top:20px;" onclick="openWindow('browser')">
+                <span class="icon">🌐</span>Browser
+            </div>
+            <div class="desktop-icon" style="left:120px; top:110px;" onclick="openWindow('mediaplayer')">
+                <span class="icon">🎵</span>Music
+            </div>
+            <div class="desktop-icon" style="left:120px; top:200px;" onclick="openWindow('about')">
                 <span class="icon">ℹ️</span>About
             </div>
 
-            <!-- 📝 NOTEPAD WINDOW -->
-            <div id="notepad" class="window" style="left:60px; top:40px; width:450px;">
+            <!-- 📝 NOTEPAD -->
+            <div id="notepad" class="window" style="left:60px; top:40px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>📝 Notepad</span>
                     <button class="close-btn" onclick="closeWindow('notepad')">✕</button>
                 </div>
                 <div class="window-body">
-                    <textarea id="notepad-text" placeholder="Type something... It auto-saves!" oninput="saveNotepad()"></textarea>
+                    <textarea id="notepad-text" placeholder="Type something... Auto-saves!" oninput="saveNotepad()" onkeydown="handleNotepadKeydown(event)"></textarea>
                     <div class="notepad-status">
                         <span class="file-name" id="notepad-filename">📄 Untitled</span>
                         <span id="notepad-char-count">0 characters</span>
@@ -375,8 +522,8 @@
                 </div>
             </div>
 
-            <!-- 🧮 CALCULATOR WINDOW -->
-            <div id="calculator" class="window" style="left:200px; top:100px; width:280px;">
+            <!-- 🧮 CALCULATOR -->
+            <div id="calculator" class="window" style="left:200px; top:100px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>🧮 Calculator</span>
                     <button class="close-btn" onclick="closeWindow('calculator')">✕</button>
@@ -405,31 +552,93 @@
             </div>
 
             <!-- 📁 FILE EXPLORER -->
-            <div id="explorer" class="window" style="left:120px; top:60px; width:500px; min-height:380px;">
+            <div id="explorer" class="window" style="left:80px; top:60px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>📁 File Explorer</span>
                     <button class="close-btn" onclick="closeWindow('explorer')">✕</button>
                 </div>
                 <div class="window-body">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="color:#888; font-size:0.8rem;">📂 C:\Documents</span>
-                        <button class="explorer-toolbar" style="background:#00ff66; color:#000; border-color:#00ff66; padding:4px 16px;" onclick="showNewFileModal()">➕ New File</button>
+                    <div class="explorer-toolbar">
+                        <button onclick="showNewFileModal()">➕ New File</button>
+                        <button onclick="showNewFolderModal()">📁 New Folder</button>
+                        <button onclick="navigateUp()">⬆ Up</button>
+                        <button onclick="renderFileList()">🔄 Refresh</button>
                     </div>
+                    <div class="explorer-path" id="explorer-path">📂 /</div>
                     <div class="file-list" id="file-list"></div>
                 </div>
             </div>
 
-            <!-- ℹ️ ABOUT WINDOW -->
-            <div id="about" class="window" style="left:250px; top:120px; width:300px;">
+            <!-- 🖼️ IMAGE VIEWER -->
+            <div id="imageviewer" class="window" style="left:150px; top:80px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>🖼️ Image Viewer</span>
+                    <button class="close-btn" onclick="closeWindow('imageviewer')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div class="image-container">
+                        <div class="upload-area" onclick="document.getElementById('image-upload').click()">
+                            📤 Click to upload an image
+                            <input type="file" id="image-upload" accept="image/*" onchange="loadImage(event)">
+                        </div>
+                        <img id="image-display" style="display:none;" alt="Image preview">
+                        <div class="image-info" id="image-info">No image loaded</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🌐 BROWSER -->
+            <div id="browser" class="window" style="left:100px; top:50px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>🌐 Browser</span>
+                    <button class="close-btn" onclick="closeWindow('browser')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div class="browser-bar">
+                        <input type="text" id="browser-url" placeholder="Enter URL (e.g., https://example.com)" value="https://example.com" onkeydown="if(event.key==='Enter') navigateTo()">
+                        <button onclick="navigateTo()">Go</button>
+                        <button onclick="document.getElementById('browser-frame').src='about:blank'">🗑️</button>
+                    </div>
+                    <div class="browser-frame">
+                        <iframe id="browser-frame" src="https://example.com" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🎵 MEDIA PLAYER -->
+            <div id="mediaplayer" class="window" style="left:180px; top:100px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>🎵 Media Player</span>
+                    <button class="close-btn" onclick="closeWindow('mediaplayer')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div class="player-container">
+                        <div class="upload-area" onclick="document.getElementById('audio-upload').click()">
+                            🎵 Click to upload audio
+                            <input type="file" id="audio-upload" accept="audio/*" onchange="loadAudio(event)">
+                        </div>
+                        <audio id="audio-player" controls style="width:100%;"></audio>
+                        <div class="track-info" id="track-info">No track loaded</div>
+                        <div class="controls">
+                            <button onclick="playAudio()">▶️ Play</button>
+                            <button onclick="pauseAudio()">⏸️ Pause</button>
+                            <button onclick="stopAudio()">⏹️ Stop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ℹ️ ABOUT -->
+            <div id="about" class="window" style="left:250px; top:120px; width:320px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
                     <span>ℹ️ About</span>
                     <button class="close-btn" onclick="closeWindow('about')">✕</button>
                 </div>
                 <div class="window-body" style="text-align:center;">
                     <div style="font-size:3rem; margin-bottom:10px;">🖥️</div>
-                    <h3 style="color:#00f3ff;">Simulated PC</h3>
-                    <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 2.0</p>
-                    <p style="color:#666; font-size:0.75rem;">With persistent file system and auto-saving notepad!</p>
+                    <h3 style="color:#00f3ff;">Simulated PC Pro</h3>
+                    <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 3.0</p>
+                    <p style="color:#666; font-size:0.75rem;">With folders, copy/paste, image viewer, browser, and media player!</p>
                     <div style="margin-top:15px; color:#555; font-size:0.7rem; border-top:1px solid #333; padding-top:10px;">
                         🖱️ Drag windows by their title bars
                     </div>
@@ -441,6 +650,9 @@
                 <button class="task-btn" onclick="openWindow('notepad')">📝 Notepad</button>
                 <button class="task-btn" onclick="openWindow('calculator')">🧮 Calc</button>
                 <button class="task-btn" onclick="openWindow('explorer')">📁 Files</button>
+                <button class="task-btn" onclick="openWindow('imageviewer')">🖼️ Images</button>
+                <button class="task-btn" onclick="openWindow('browser')">🌐 Browser</button>
+                <button class="task-btn" onclick="openWindow('mediaplayer')">🎵 Music</button>
                 <button class="task-btn" onclick="openWindow('about')">ℹ️ About</button>
                 <button class="task-btn" onclick="shutdown()" style="background:#550a1a; border-color:#ff0055;">⏻ Shutdown</button>
                 <span class="clock" id="clock">00:00</span>
@@ -449,7 +661,7 @@
         </div>
     </div>
 
-    <!-- 📝 NEW FILE MODAL -->
+    <!-- 📝 MODALS -->
     <div class="modal-overlay" id="newfile-modal">
         <div class="modal-box">
             <h3>📄 New File</h3>
@@ -462,54 +674,143 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="newfolder-modal">
+        <div class="modal-box">
+            <h3>📁 New Folder</h3>
+            <p style="color:#888; font-size:0.8rem;">Enter a name for your new folder:</p>
+            <input type="text" id="newfolder-input" placeholder="My Folder" onkeydown="if(event.key==='Enter') confirmNewFolder()">
+            <div class="modal-actions">
+                <button class="cancel" onclick="hideNewFolderModal()">Cancel</button>
+                <button class="confirm" onclick="confirmNewFolder()">Create</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ========================================
         // 📂 FILE SYSTEM ENGINE (localStorage)
         // ========================================
-        const STORAGE_KEY = 'simulated_pc_files';
+        const STORAGE_KEY = 'simulated_pc_files_v3';
+        let currentPath = '/';
 
-        function getFiles() {
+        function getFilesystem() {
             try {
                 const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : {};
+                return data ? JSON.parse(data) : { '/': { type: 'folder', children: {} } };
             } catch(e) {
-                return {};
+                return { '/': { type: 'folder', children: {} } };
             }
         }
 
-        function saveFiles(files) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+        function saveFilesystem(fs) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(fs));
         }
 
-        function getFileContent(filename) {
-            const files = getFiles();
-            return files[filename] || '';
+        function getNode(path) {
+            const fs = getFilesystem();
+            const parts = path.split('/').filter(p => p);
+            let node = fs['/'];
+            for (const part of parts) {
+                if (!node.children || !node.children[part]) return null;
+                node = node.children[part];
+            }
+            return node;
         }
 
-        function setFileContent(filename, content) {
-            const files = getFiles();
-            files[filename] = content;
-            saveFiles(files);
-            renderFileList();
+        function getNodeAtPath(path) {
+            const fs = getFilesystem();
+            const parts = path.split('/').filter(p => p);
+            let node = fs['/'];
+            for (const part of parts) {
+                if (!node.children || !node.children[part]) return null;
+                node = node.children[part];
+            }
+            return node;
         }
 
-        function deleteFile(filename) {
-            const files = getFiles();
-            delete files[filename];
-            saveFiles(files);
-            renderFileList();
-            // If currently editing this file in notepad, clear it
-            if (currentNotepadFile === filename) {
-                currentNotepadFile = null;
-                document.getElementById('notepad-text').value = '';
-                document.getElementById('notepad-filename').textContent = '📄 Untitled';
-                updateCharCount();
+        function createNode(path, type, content = '') {
+            const fs = getFilesystem();
+            const parts = path.split('/').filter(p => p);
+            const name = parts.pop();
+            let parent = fs['/'];
+            for (const part of parts) {
+                if (!parent.children) parent.children = {};
+                if (!parent.children[part]) {
+                    parent.children[part] = { type: 'folder', children: {} };
+                }
+                parent = parent.children[part];
+            }
+            if (!parent.children) parent.children = {};
+            if (parent.children[name]) return false;
+            parent.children[name] = type === 'folder' ? { type: 'folder', children: {} } : { type: 'file', content: content || '' };
+            saveFilesystem(fs);
+            return true;
+        }
+
+        function deleteNode(path) {
+            const fs = getFilesystem();
+            const parts = path.split('/').filter(p => p);
+            const name = parts.pop();
+            let parent = fs['/'];
+            for (const part of parts) {
+                if (!parent.children || !parent.children[part]) return false;
+                parent = parent.children[part];
+            }
+            if (!parent.children || !parent.children[name]) return false;
+            delete parent.children[name];
+            saveFilesystem(fs);
+            return true;
+        }
+
+        function getChildren(path) {
+            const node = getNodeAtPath(path);
+            if (!node || node.type !== 'folder') return [];
+            const children = node.children || {};
+            return Object.keys(children).map(name => ({
+                name,
+                ...children[name],
+                path: path === '/' ? '/' + name : path + '/' + name
+            }));
+        }
+
+        function getFileContent(path) {
+            const node = getNodeAtPath(path);
+            return node && node.type === 'file' ? node.content || '' : '';
+        }
+
+        function setFileContent(path, content) {
+            const fs = getFilesystem();
+            const parts = path.split('/').filter(p => p);
+            const name = parts.pop();
+            let parent = fs['/'];
+            for (const part of parts) {
+                if (!parent.children || !parent.children[part]) return false;
+                parent = parent.children[part];
+            }
+            if (!parent.children || !parent.children[name] || parent.children[name].type !== 'file') return false;
+            parent.children[name].content = content;
+            saveFilesystem(fs);
+            return true;
+        }
+
+        function getCurrentPath() {
+            return currentPath;
+        }
+
+        function navigateToPath(path) {
+            const node = getNodeAtPath(path);
+            if (node && node.type === 'folder') {
+                currentPath = path;
+                renderFileList();
+                document.getElementById('explorer-path').textContent = '📂 ' + (path === '/' ? '/' : path);
             }
         }
 
-        function getFileList() {
-            const files = getFiles();
-            return Object.keys(files).sort();
+        function navigateUp() {
+            if (currentPath === '/') return;
+            const parts = currentPath.split('/').filter(p => p);
+            parts.pop();
+            navigateToPath('/' + parts.join('/'));
         }
 
         // ========================================
@@ -524,56 +825,66 @@
             const content = notepadText.value;
             if (currentNotepadFile) {
                 setFileContent(currentNotepadFile, content);
-            } else {
-                // Auto-save to a temporary file if untitled
-                const files = getFiles();
-                const tempName = 'untitled_' + Date.now() + '.txt';
-                files[tempName] = content;
-                saveFiles(files);
-                currentNotepadFile = tempName;
-                notepadFilename.textContent = '📄 ' + tempName;
                 renderFileList();
             }
             updateCharCount();
         }
 
         function updateCharCount() {
-            const count = notepadText.value.length;
-            notepadCharCount.textContent = count + ' characters';
+            notepadCharCount.textContent = notepadText.value.length + ' characters';
         }
 
-        function openFileInNotepad(filename) {
-            const content = getFileContent(filename);
-            currentNotepadFile = filename;
+        function openFileInNotepad(path) {
+            const content = getFileContent(path);
+            currentNotepadFile = path;
             notepadText.value = content;
-            notepadFilename.textContent = '📄 ' + filename;
+            const name = path.split('/').pop();
+            notepadFilename.textContent = '📄 ' + name;
             updateCharCount();
             openWindow('notepad');
+            // Focus the textarea
+            setTimeout(() => notepadText.focus(), 100);
         }
 
-        // Auto-save on any change
-        notepadText.addEventListener('input', saveNotepad);
+        // Keyboard shortcuts for notepad
+        function handleNotepadKeydown(e) {
+            // Ctrl+C, Ctrl+X, Ctrl+V are handled natively by browser
+            // But we can add custom behavior if needed
+            if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveNotepad();
+            }
+        }
 
         // ========================================
         // 📁 FILE EXPLORER RENDERER
         // ========================================
         function renderFileList() {
             const container = document.getElementById('file-list');
-            const files = getFileList();
+            const items = getChildren(currentPath);
             
-            if (files.length === 0) {
-                container.innerHTML = '<div class="empty-files">📂 No files yet. Click "New File" to create one!</div>';
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-files">📂 Empty folder</div>';
                 return;
             }
 
-            container.innerHTML = files.map(filename => {
-                const isTxt = filename.endsWith('.txt');
-                const icon = isTxt ? '📄' : '📄';
+            // Sort: folders first, then files
+            items.sort((a, b) => {
+                if (a.type === 'folder' && b.type !== 'folder') return -1;
+                if (a.type !== 'folder' && b.type === 'folder') return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            container.innerHTML = items.map(item => {
+                const isFolder = item.type === 'folder';
+                const icon = isFolder ? '📁' : (item.name.endsWith('.txt') ? '📄' : (item.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i) ? '🖼️' : '📄'));
+                const isImage = item.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
                 return `
-                    <div class="file-item" onclick="openFileInNotepad('${filename}')">
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteFile('${filename}')">✕</button>
+                    <div class="file-item ${isFolder ? 'folder-item' : ''}" 
+                         onclick="${isFolder ? `navigateToPath('${item.path}')` : (isImage ? `openImage('${item.path}')` : `openFileInNotepad('${item.path}')`)}">
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteNode('${item.path}'); renderFileList();">✕</button>
                         <span class="icon">${icon}</span>
-                        <span class="name">${filename}</span>
+                        <span class="name">${item.name}</span>
                     </div>
                 `;
             }).join('');
@@ -601,16 +912,112 @@
             if (!name.endsWith('.txt')) {
                 name += '.txt';
             }
-            const files = getFiles();
-            if (files[name]) {
+            const path = currentPath === '/' ? '/' + name : currentPath + '/' + name;
+            if (getNodeAtPath(path)) {
                 alert('⚠️ A file with that name already exists!');
                 return;
             }
-            files[name] = '';
-            saveFiles(files);
+            createNode(path, 'file', '');
             renderFileList();
             hideNewFileModal();
-            openFileInNotepad(name);
+            openFileInNotepad(path);
+        }
+
+        // ========================================
+        // 📁 NEW FOLDER MODAL
+        // ========================================
+        function showNewFolderModal() {
+            document.getElementById('newfolder-modal').classList.add('show');
+            document.getElementById('newfolder-input').value = '';
+            document.getElementById('newfolder-input').focus();
+        }
+
+        function hideNewFolderModal() {
+            document.getElementById('newfolder-modal').classList.remove('show');
+        }
+
+        function confirmNewFolder() {
+            const input = document.getElementById('newfolder-input');
+            let name = input.value.trim();
+            if (!name) {
+                name = 'New Folder';
+            }
+            const path = currentPath === '/' ? '/' + name : currentPath + '/' + name;
+            if (getNodeAtPath(path)) {
+                alert('⚠️ A folder with that name already exists!');
+                return;
+            }
+            createNode(path, 'folder');
+            renderFileList();
+            hideNewFolderModal();
+        }
+
+        // ========================================
+        // 🖼️ IMAGE VIEWER
+        // ========================================
+        let currentImageData = null;
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('image-display');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                document.getElementById('image-info').textContent = `📷 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                currentImageData = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function openImage(path) {
+            // For stored images, we'd need to store them in localStorage too
+            // This is a simplified version - just alert
+            alert('🖼️ Images stored in localStorage would open here.\n\nFor now, use the upload button in the Image Viewer window.');
+            openWindow('imageviewer');
+        }
+
+        // ========================================
+        // 🌐 BROWSER
+        // ========================================
+        function navigateTo() {
+            const url = document.getElementById('browser-url').value.trim();
+            if (!url) return;
+            let finalUrl = url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                finalUrl = 'https://' + url;
+            }
+            document.getElementById('browser-frame').src = finalUrl;
+        }
+
+        // ========================================
+        // 🎵 MEDIA PLAYER
+        // ========================================
+        let audioPlayer = document.getElementById('audio-player');
+        let currentAudioFile = null;
+
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            audioPlayer.src = url;
+            audioPlayer.load();
+            document.getElementById('track-info').textContent = `🎵 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            currentAudioFile = file.name;
+        }
+
+        function playAudio() {
+            audioPlayer.play().catch(e => console.log('Playback error'));
+        }
+
+        function pauseAudio() {
+            audioPlayer.pause();
+        }
+
+        function stopAudio() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
         }
 
         // ========================================
@@ -623,7 +1030,7 @@
         const bootMessages = [
             'Loading kernel modules...',
             'Initializing file system...',
-            'Mounting C: drive...',
+            'Mounting drives...',
             'Loading desktop environment...',
             'Starting taskbar services...',
             'System ready!'
@@ -668,12 +1075,18 @@
         }
 
         function updateTaskbar() {
+            const windows = ['notepad', 'calculator', 'explorer', 'imageviewer', 'browser', 'mediaplayer', 'about'];
             document.querySelectorAll('.task-btn').forEach(btn => {
-                const id = btn.textContent.trim().toLowerCase().replace(/[^a-z]/g, '');
-                const win = document.getElementById(id === 'calc' ? 'calculator' : 
-                                               id === 'files' ? 'explorer' : 
-                                               id === 'about' ? 'about' : 
-                                               id === 'notepad' ? 'notepad' : null);
+                const text = btn.textContent.trim().toLowerCase().replace(/[^a-z]/g, '');
+                let id = text;
+                if (text === 'calc') id = 'calculator';
+                else if (text === 'files') id = 'explorer';
+                else if (text === 'images') id = 'imageviewer';
+                else if (text === 'browser') id = 'browser';
+                else if (text === 'music') id = 'mediaplayer';
+                else if (text === 'about') id = 'about';
+                else if (text === 'notepad') id = 'notepad';
+                const win = document.getElementById(id);
                 if (win) {
                     btn.classList.toggle('active', win.style.display === 'flex');
                 }
