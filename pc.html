@@ -33,7 +33,9 @@
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             position: relative;
             padding: 10px;
+            transition: filter 0.3s;
         }
+        #desktop.dev-mode { filter: hue-rotate(180deg) brightness(1.1); }
 
         /* 🗂️ DESKTOP ICONS */
         .desktop-icon {
@@ -362,6 +364,75 @@
         #mediaplayer .player-container .controls button:hover { background: #3a3a5e; color: #fff; }
         #mediaplayer .player-container .controls button.active { background: #00ff66; color: #000; }
 
+        /* 🔧 DEV MODE - SYSTEM MONITOR */
+        #devtools { width: 420px; min-height: 400px; }
+        #devtools .dev-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 12px;
+        }
+        #devtools .dev-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        #devtools .dev-section h4 { color: #00f3ff; font-size: 0.85rem; margin-bottom: 8px; }
+        #devtools .stat-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 4px 0;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        #devtools .stat-bar .bar-track {
+            flex: 1;
+            height: 6px;
+            background: #1a1a2e;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #devtools .stat-bar .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+        .bar-fill.cpu { background: #00ff66; }
+        .bar-fill.mem { background: #00f3ff; }
+        .bar-fill.storage { background: #ffd700; }
+        .bar-fill.network { background: #ff3366; }
+        #devtools .console-log {
+            background: #0a0a12;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #00ff66;
+        }
+        #devtools .console-log .log-entry { padding: 2px 0; border-bottom: 1px solid #111; }
+        #devtools .console-log .log-entry.error { color: #ff3366; }
+        #devtools .console-log .log-entry.warn { color: #ffd700; }
+        #devtools .console-log .log-entry.info { color: #00f3ff; }
+        #devtools .console-log .log-entry.success { color: #00ff66; }
+        .dev-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .dev-actions button {
+            background: #2a2a3e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+        .dev-actions button:hover { background: #3a3a5e; color: #fff; }
+        .dev-actions button.danger:hover { background: #550a1a; border-color: #ff0055; color: #ff0055; }
+        .dev-actions button.success:hover { background: #004422; border-color: #00ff66; color: #00ff66; }
+
         /* 🗄️ TASKBAR */
         #taskbar {
             position: absolute;
@@ -391,6 +462,7 @@
         }
         #taskbar .task-btn:hover { background: #3a3a5e; color: #fff; }
         #taskbar .task-btn.active { background: #3a3a5e; color: #00f3ff; border-color: #00f3ff; }
+        #taskbar .task-btn.dev-indicator { background: #1a3a2a; border-color: #00ff66; color: #00ff66; }
         #taskbar .clock {
             margin-left: auto;
             color: #888;
@@ -417,7 +489,7 @@
         #boot-screen .bar-fill { height: 100%; width: 0%; background: #00ff66; transition: width 0.1s; }
         #boot-screen .status { margin-top: 15px; font-size: 0.8rem; color: #888; }
 
-        /* 📝 MODAL */
+        /* 📝 MODALS */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -469,12 +541,45 @@
         .modal-box .modal-actions .cancel:hover { background: #444; }
         .modal-box .modal-actions .confirm { background: #00ff66; color: #000; }
         .modal-box .modal-actions .confirm:hover { background: #00cc55; }
+
+        /* 🔍 ELEMENT INSPECTOR HIGHLIGHT */
+        .inspect-highlight {
+            outline: 2px solid #00f3ff !important;
+            outline-offset: 2px !important;
+            background: rgba(0, 243, 255, 0.1) !important;
+        }
+
+        /* 💡 DEV MODE NOTIFICATION */
+        .dev-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a2a;
+            border: 1px solid #00ff66;
+            color: #00ff66;
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            z-index: 9999;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+        .dev-notification.show { display: block; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
     </style>
 </head>
 <body>
 
     <div id="monitor">
         <div id="desktop">
+
+            <!-- 🔔 DEV NOTIFICATION -->
+            <div id="dev-notification" class="dev-notification">🔧 Developer Mode Activated</div>
 
             <!-- 🚀 BOOT SCREEN -->
             <div id="boot-screen">
@@ -503,7 +608,10 @@
             <div class="desktop-icon" style="left:120px; top:110px;" onclick="openWindow('mediaplayer')">
                 <span class="icon">🎵</span>Music
             </div>
-            <div class="desktop-icon" style="left:120px; top:200px;" onclick="openWindow('about')">
+            <div class="desktop-icon" style="left:120px; top:200px;" onclick="openWindow('devtools')">
+                <span class="icon">🔧</span>Dev Tools
+            </div>
+            <div class="desktop-icon" style="left:120px; top:290px;" onclick="openWindow('about')">
                 <span class="icon">ℹ️</span>About
             </div>
 
@@ -595,7 +703,7 @@
                 </div>
                 <div class="window-body">
                     <div class="browser-bar">
-                        <input type="text" id="browser-url" placeholder="Enter URL (e.g., https://example.com)" value="https://example.com" onkeydown="if(event.key==='Enter') navigateTo()">
+                        <input type="text" id="browser-url" placeholder="Enter URL" value="https://example.com" onkeydown="if(event.key==='Enter') navigateTo()">
                         <button onclick="navigateTo()">Go</button>
                         <button onclick="document.getElementById('browser-frame').src='about:blank'">🗑️</button>
                     </div>
@@ -628,6 +736,54 @@
                 </div>
             </div>
 
+            <!-- 🔧 DEV TOOLS -->
+            <div id="devtools" class="window" style="left:200px; top:80px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>🔧 Developer Tools</span>
+                    <button class="close-btn" onclick="closeWindow('devtools')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div class="dev-section">
+                        <h4>📊 System Monitor</h4>
+                        <div class="stat-bar">
+                            <span>CPU</span>
+                            <div class="bar-track"><div class="bar-fill cpu" id="cpu-usage" style="width:12%"></div></div>
+                            <span id="cpu-text">12%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <span>Memory</span>
+                            <div class="bar-track"><div class="bar-fill mem" id="mem-usage" style="width:35%"></div></div>
+                            <span id="mem-text">35%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <span>Storage</span>
+                            <div class="bar-track"><div class="bar-fill storage" id="storage-usage" style="width:28%"></div></div>
+                            <span id="storage-text">28%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <span>Network</span>
+                            <div class="bar-track"><div class="bar-fill network" id="network-usage" style="width:8%"></div></div>
+                            <span id="network-text">8%</span>
+                        </div>
+                    </div>
+                    <div class="dev-section">
+                        <h4>📋 Console Log</h4>
+                        <div class="console-log" id="console-log">
+                            <div class="log-entry info">[SYSTEM] Developer Tools initialized</div>
+                        </div>
+                    </div>
+                    <div class="dev-section">
+                        <h4>⚡ Quick Actions</h4>
+                        <div class="dev-actions">
+                            <button class="success" onclick="reloadSystem()">🔄 Reload System</button>
+                            <button onclick="clearStorage()">🗑️ Clear Storage</button>
+                            <button onclick="toggleInspector()">🔍 Toggle Inspector</button>
+                            <button class="danger" onclick="forceCrash()">💥 Force Crash</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ℹ️ ABOUT -->
             <div id="about" class="window" style="left:250px; top:120px; width:320px;">
                 <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
@@ -640,7 +796,8 @@
                     <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 3.0</p>
                     <p style="color:#666; font-size:0.75rem;">With folders, copy/paste, image viewer, browser, and media player!</p>
                     <div style="margin-top:15px; color:#555; font-size:0.7rem; border-top:1px solid #333; padding-top:10px;">
-                        🖱️ Drag windows by their title bars
+                        🖱️ Drag windows by their title bars<br>
+                        🔧 Press Ctrl+Shift+D for Dev Mode
                     </div>
                 </div>
             </div>
@@ -653,6 +810,7 @@
                 <button class="task-btn" onclick="openWindow('imageviewer')">🖼️ Images</button>
                 <button class="task-btn" onclick="openWindow('browser')">🌐 Browser</button>
                 <button class="task-btn" onclick="openWindow('mediaplayer')">🎵 Music</button>
+                <button class="task-btn" onclick="openWindow('devtools')">🔧 Dev Tools</button>
                 <button class="task-btn" onclick="openWindow('about')">ℹ️ About</button>
                 <button class="task-btn" onclick="shutdown()" style="background:#550a1a; border-color:#ff0055;">⏻ Shutdown</button>
                 <span class="clock" id="clock">00:00</span>
@@ -704,17 +862,6 @@
 
         function saveFilesystem(fs) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(fs));
-        }
-
-        function getNode(path) {
-            const fs = getFilesystem();
-            const parts = path.split('/').filter(p => p);
-            let node = fs['/'];
-            for (const part of parts) {
-                if (!node.children || !node.children[part]) return null;
-                node = node.children[part];
-            }
-            return node;
         }
 
         function getNodeAtPath(path) {
@@ -793,10 +940,6 @@
             return true;
         }
 
-        function getCurrentPath() {
-            return currentPath;
-        }
-
         function navigateToPath(path) {
             const node = getNodeAtPath(path);
             if (node && node.type === 'folder') {
@@ -842,14 +985,10 @@
             notepadFilename.textContent = '📄 ' + name;
             updateCharCount();
             openWindow('notepad');
-            // Focus the textarea
             setTimeout(() => notepadText.focus(), 100);
         }
 
-        // Keyboard shortcuts for notepad
         function handleNotepadKeydown(e) {
-            // Ctrl+C, Ctrl+X, Ctrl+V are handled natively by browser
-            // But we can add custom behavior if needed
             if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 saveNotepad();
@@ -868,7 +1007,6 @@
                 return;
             }
 
-            // Sort: folders first, then files
             items.sort((a, b) => {
                 if (a.type === 'folder' && b.type !== 'folder') return -1;
                 if (a.type !== 'folder' && b.type === 'folder') return 1;
@@ -906,17 +1044,10 @@
         function confirmNewFile() {
             const input = document.getElementById('newfile-input');
             let name = input.value.trim();
-            if (!name) {
-                name = 'untitled_' + Date.now() + '.txt';
-            }
-            if (!name.endsWith('.txt')) {
-                name += '.txt';
-            }
+            if (!name) name = 'untitled_' + Date.now() + '.txt';
+            if (!name.endsWith('.txt')) name += '.txt';
             const path = currentPath === '/' ? '/' + name : currentPath + '/' + name;
-            if (getNodeAtPath(path)) {
-                alert('⚠️ A file with that name already exists!');
-                return;
-            }
+            if (getNodeAtPath(path)) { alert('⚠️ File exists!'); return; }
             createNode(path, 'file', '');
             renderFileList();
             hideNewFileModal();
@@ -939,14 +1070,9 @@
         function confirmNewFolder() {
             const input = document.getElementById('newfolder-input');
             let name = input.value.trim();
-            if (!name) {
-                name = 'New Folder';
-            }
+            if (!name) name = 'New Folder';
             const path = currentPath === '/' ? '/' + name : currentPath + '/' + name;
-            if (getNodeAtPath(path)) {
-                alert('⚠️ A folder with that name already exists!');
-                return;
-            }
+            if (getNodeAtPath(path)) { alert('⚠️ Folder exists!'); return; }
             createNode(path, 'folder');
             renderFileList();
             hideNewFolderModal();
@@ -955,8 +1081,6 @@
         // ========================================
         // 🖼️ IMAGE VIEWER
         // ========================================
-        let currentImageData = null;
-
         function loadImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -966,15 +1090,13 @@
                 img.src = e.target.result;
                 img.style.display = 'block';
                 document.getElementById('image-info').textContent = `📷 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-                currentImageData = e.target.result;
+                addConsoleLog(`📷 Loaded image: ${file.name}`, 'info');
             };
             reader.readAsDataURL(file);
         }
 
         function openImage(path) {
-            // For stored images, we'd need to store them in localStorage too
-            // This is a simplified version - just alert
-            alert('🖼️ Images stored in localStorage would open here.\n\nFor now, use the upload button in the Image Viewer window.');
+            alert('🖼️ Images stored in localStorage would open here.\n\nUse the upload button in the Image Viewer window.');
             openWindow('imageviewer');
         }
 
@@ -989,13 +1111,13 @@
                 finalUrl = 'https://' + url;
             }
             document.getElementById('browser-frame').src = finalUrl;
+            addConsoleLog(`🌐 Navigated to: ${finalUrl}`, 'info');
         }
 
         // ========================================
         // 🎵 MEDIA PLAYER
         // ========================================
         let audioPlayer = document.getElementById('audio-player');
-        let currentAudioFile = null;
 
         function loadAudio(event) {
             const file = event.target.files[0];
@@ -1004,20 +1126,204 @@
             audioPlayer.src = url;
             audioPlayer.load();
             document.getElementById('track-info').textContent = `🎵 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-            currentAudioFile = file.name;
+            addConsoleLog(`🎵 Loaded audio: ${file.name}`, 'info');
         }
 
-        function playAudio() {
-            audioPlayer.play().catch(e => console.log('Playback error'));
+        function playAudio() { audioPlayer.play().catch(e => console.log('Playback error')); }
+        function pauseAudio() { audioPlayer.pause(); }
+        function stopAudio() { audioPlayer.pause(); audioPlayer.currentTime = 0; }
+
+        // ========================================
+        // 🔧 DEVELOPER MODE ENGINE
+        // ========================================
+        let devModeActive = false;
+        let inspectorActive = false;
+        let consoleLogs = [];
+
+        function toggleDevMode() {
+            devModeActive = !devModeActive;
+            const desktop = document.getElementById('desktop');
+            const notification = document.getElementById('dev-notification');
+            
+            if (devModeActive) {
+                desktop.classList.add('dev-mode');
+                notification.textContent = '🔧 Developer Mode Activated';
+                notification.style.borderColor = '#00ff66';
+                notification.style.color = '#00ff66';
+                notification.classList.add('show');
+                addConsoleLog('🔧 Developer Mode activated', 'success');
+                
+                // Show dev tools window
+                openWindow('devtools');
+                
+                // Start system monitor
+                startSystemMonitor();
+                
+                // Add dev indicator to taskbar
+                const devBtn = document.querySelector('.task-btn.dev-indicator');
+                if (!devBtn) {
+                    const btn = document.createElement('button');
+                    btn.className = 'task-btn dev-indicator';
+                    btn.textContent = '🔧 DEV MODE';
+                    btn.onclick = () => openWindow('devtools');
+                    document.getElementById('taskbar').insertBefore(btn, document.querySelector('.clock'));
+                }
+            } else {
+                desktop.classList.remove('dev-mode');
+                notification.textContent = '🔧 Developer Mode Deactivated';
+                notification.style.borderColor = '#ff3366';
+                notification.style.color = '#ff3366';
+                notification.classList.add('show');
+                addConsoleLog('🔧 Developer Mode deactivated', 'warn');
+                
+                const devBtn = document.querySelector('.task-btn.dev-indicator');
+                if (devBtn) devBtn.remove();
+            }
+            
+            setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        function pauseAudio() {
-            audioPlayer.pause();
+        // ⌨️ Keyboard shortcut: Ctrl+Shift+D
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+                e.preventDefault();
+                toggleDevMode();
+            }
+        });
+
+        // ========================================
+        // 📊 SYSTEM MONITOR
+        // ========================================
+        let monitorInterval = null;
+
+        function startSystemMonitor() {
+            if (monitorInterval) clearInterval(monitorInterval);
+            monitorInterval = setInterval(updateSystemStats, 1000);
         }
 
-        function stopAudio() {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
+        function updateSystemStats() {
+            // Simulate realistic system stats with random variation
+            const cpu = Math.min(95, 5 + Math.random() * 40 + (devModeActive ? 15 : 0));
+            const mem = Math.min(90, 20 + Math.random() * 30 + (devModeActive ? 10 : 0));
+            const storage = Math.min(85, 15 + Math.random() * 25);
+            const network = Math.min(60, 2 + Math.random() * 20);
+
+            document.getElementById('cpu-usage').style.width = cpu + '%';
+            document.getElementById('cpu-text').textContent = Math.round(cpu) + '%';
+            document.getElementById('mem-usage').style.width = mem + '%';
+            document.getElementById('mem-text').textContent = Math.round(mem) + '%';
+            document.getElementById('storage-usage').style.width = storage + '%';
+            document.getElementById('storage-text').textContent = Math.round(storage) + '%';
+            document.getElementById('network-usage').style.width = network + '%';
+            document.getElementById('network-text').textContent = Math.round(network) + '%';
+        }
+
+        // ========================================
+        // 📋 CONSOLE LOG
+        // ========================================
+        function addConsoleLog(message, type = 'info') {
+            const log = document.getElementById('console-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep only last 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.firstChild);
+            }
+        }
+
+        // Override console.log to capture messages
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            addConsoleLog(args.join(' '), 'info');
+        };
+
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            addConsoleLog('❌ ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalConsoleWarn.apply(console, args);
+            addConsoleLog('⚠️ ' + args.join(' '), 'warn');
+        };
+
+        // ========================================
+        // 🔍 ELEMENT INSPECTOR
+        // ========================================
+        function toggleInspector() {
+            inspectorActive = !inspectorActive;
+            if (inspectorActive) {
+                addConsoleLog('🔍 Inspector enabled - hover over elements', 'info');
+                document.addEventListener('mouseover', inspectElement);
+                document.addEventListener('mouseout', uninspectElement);
+            } else {
+                document.removeEventListener('mouseover', inspectElement);
+                document.removeEventListener('mouseout', uninspectElement);
+                // Remove all highlights
+                document.querySelectorAll('.inspect-highlight').forEach(el => {
+                    el.classList.remove('inspect-highlight');
+                });
+                addConsoleLog('🔍 Inspector disabled', 'info');
+            }
+        }
+
+        function inspectElement(e) {
+            const target = e.target;
+            if (target.closest('#devtools')) return;
+            if (target.closest('#taskbar')) return;
+            target.classList.add('inspect-highlight');
+            addConsoleLog(`🔍 Inspected: ${target.tagName.toLowerCase()}${target.id ? '#' + target.id : ''}`, 'info');
+        }
+
+        function uninspectElement(e) {
+            const target = e.target;
+            target.classList.remove('inspect-highlight');
+        }
+
+        // ========================================
+        // ⚡ QUICK ACTIONS
+        // ========================================
+        function reloadSystem() {
+            addConsoleLog('🔄 Reloading system...', 'warn');
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        }
+
+        function clearStorage() {
+            if (confirm('⚠️ Clear all stored data? This will delete all files!')); {
+                localStorage.removeItem(STORAGE_KEY);
+                addConsoleLog('🗑️ Storage cleared', 'error');
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+
+        function forceCrash() {
+            addConsoleLog('💥 Forcing system crash...', 'error');
+            const desktop = document.getElementById('desktop');
+            desktop.style.background = 'linear-gradient(135deg, #ff0055, #000)';
+            document.getElementById('boot-screen').style.display = 'flex';
+            document.getElementById('boot-screen').querySelector('.logo').textContent = '💀';
+            document.getElementById('boot-screen').querySelector('h2').textContent = 'SYSTEM CRASH';
+            document.querySelector('#boot-screen .status').textContent = 'Fatal error: User initiated crash';
+            
+            setTimeout(() => {
+                addConsoleLog('💀 System crashed successfully', 'error');
+                setTimeout(() => {
+                    if (confirm('💀 System crashed! Reboot?')) {
+                        location.reload();
+                    }
+                }, 1000);
+            }, 1000);
         }
 
         // ========================================
@@ -1051,6 +1357,7 @@
                 setTimeout(() => {
                     document.getElementById('boot-screen').style.display = 'none';
                     renderFileList();
+                    addConsoleLog('🚀 System boot complete', 'success');
                 }, 400);
             }
         }
@@ -1075,8 +1382,8 @@
         }
 
         function updateTaskbar() {
-            const windows = ['notepad', 'calculator', 'explorer', 'imageviewer', 'browser', 'mediaplayer', 'about'];
-            document.querySelectorAll('.task-btn').forEach(btn => {
+            const windows = ['notepad', 'calculator', 'explorer', 'imageviewer', 'browser', 'mediaplayer', 'devtools', 'about'];
+            document.querySelectorAll('.task-btn:not(.dev-indicator)').forEach(btn => {
                 const text = btn.textContent.trim().toLowerCase().replace(/[^a-z]/g, '');
                 let id = text;
                 if (text === 'calc') id = 'calculator';
@@ -1084,6 +1391,7 @@
                 else if (text === 'images') id = 'imageviewer';
                 else if (text === 'browser') id = 'browser';
                 else if (text === 'music') id = 'mediaplayer';
+                else if (text === 'devtools' || text === 'devtools') id = 'devtools';
                 else if (text === 'about') id = 'about';
                 else if (text === 'notepad') id = 'notepad';
                 const win = document.getElementById(id);
@@ -1192,6 +1500,7 @@
                 bootScreen.querySelector('h2').textContent = 'SYSTEM SHUTDOWN';
                 bootStatus.textContent = 'Saving system state...';
                 bootFill.style.width = '0%';
+                addConsoleLog('⏻ System shutdown initiated', 'warn');
                 
                 document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
                 
