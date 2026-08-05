@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖥️ Simulated PC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+        }
+
+        /* 🖥️ THE PC MONITOR FRAME */
+        #monitor {
+            width: 900px;
+            height: 650px;
+            background: #0a0a12;
+            border: 12px solid #2a2a3a;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 🖼️ DESKTOP BACKGROUND */
+        #desktop {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            position: relative;
+            padding: 10px;
+        }
+
+        /* 🗂️ DESKTOP ICONS */
+        .desktop-icon {
+            position: absolute;
+            width: 80px;
+            text-align: center;
+            color: #fff;
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .desktop-icon:hover { background: rgba(255,255,255,0.08); }
+        .desktop-icon .icon { font-size: 2.5rem; display: block; margin-bottom: 4px; }
+
+        /* 🪟 WINDOW SYSTEM */
+        .window {
+            position: absolute;
+            background: #1e1e2e;
+            border: 1px solid #3a3a4a;
+            border-radius: 6px;
+            min-width: 250px;
+            min-height: 150px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .window.active { display: flex; }
+        .window-header {
+            background: #2a2a3e;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            border-radius: 6px 6px 0 0;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .window-header:active { cursor: grabbing; }
+        .window-header .close-btn {
+            background: #ff0055;
+            border: none;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .window-header .close-btn:hover { transform: scale(1.1); }
+        .window-body {
+            padding: 15px;
+            flex: 1;
+            color: #ccc;
+            font-size: 0.9rem;
+            overflow: auto;
+        }
+
+        /* 📝 NOTEPAD APP */
+        #notepad textarea {
+            width: 100%;
+            height: 200px;
+            background: #0a0a12;
+            color: #00ff66;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            resize: none;
+            outline: none;
+        }
+
+        /* 🧮 CALCULATOR APP */
+        #calculator .calc-display {
+            background: #0a0a12;
+            color: #00f3ff;
+            padding: 10px;
+            text-align: right;
+            font-size: 1.5rem;
+            font-family: 'Courier New', monospace;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid #333;
+            min-height: 45px;
+        }
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+        .calc-grid button {
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: #2a2a3e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .calc-grid button:hover { background: #3a3a5e; }
+        .calc-grid .op { background: #1a3a5e; color: #00f3ff; }
+        .calc-grid .eq { background: #00ff66; color: #000; }
+        .calc-grid .eq:hover { background: #00cc55; }
+
+        /* 📁 FILE EXPLORER */
+        #explorer .file-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        #explorer .file-item {
+            background: #0a0a12;
+            padding: 15px 10px;
+            text-align: center;
+            border-radius: 4px;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #explorer .file-item:hover { background: #1a1a2e; }
+        #explorer .file-item .icon { font-size: 1.8rem; display: block; }
+        #explorer .file-item .name { font-size: 0.7rem; color: #888; margin-top: 4px; }
+
+        /* 🗄️ TASKBAR */
+        #taskbar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: rgba(20, 20, 35, 0.95);
+            border-top: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+        }
+        #taskbar .task-btn {
+            background: #2a2a3e;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        #taskbar .task-btn:hover { background: #3a3a5e; color: #fff; }
+        #taskbar .task-btn.active { background: #3a3a5e; color: #00f3ff; border-color: #00f3ff; }
+        #taskbar .clock {
+            margin-left: auto;
+            color: #888;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 🔄 BOOT SCREEN */
+        #boot-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0a12;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: #00ff66;
+            font-family: 'Courier New', monospace;
+        }
+        #boot-screen .logo { font-size: 3rem; margin-bottom: 20px; }
+        #boot-screen .bar { width: 300px; height: 8px; background: #1a1a2e; border-radius: 4px; overflow: hidden; }
+        #boot-screen .bar-fill { height: 100%; width: 0%; background: #00ff66; transition: width 0.1s; }
+        #boot-screen .status { margin-top: 15px; font-size: 0.8rem; color: #888; }
+    </style>
+</head>
+<body>
+
+    <div id="monitor">
+        <div id="desktop">
+
+            <!-- 🚀 BOOT SCREEN -->
+            <div id="boot-screen">
+                <div class="logo">🖥️</div>
+                <h2 style="color:#00f3ff; margin-bottom:10px;">SYSTEM BOOT</h2>
+                <div class="bar"><div class="bar-fill" id="boot-fill"></div></div>
+                <div class="status" id="boot-status">Loading kernel modules...</div>
+            </div>
+
+            <!-- 🗂️ DESKTOP ICONS -->
+            <div class="desktop-icon" style="left:20px; top:20px;" onclick="openWindow('notepad')">
+                <span class="icon">📝</span>Notepad
+            </div>
+            <div class="desktop-icon" style="left:20px; top:110px;" onclick="openWindow('calculator')">
+                <span class="icon">🧮</span>Calculator
+            </div>
+            <div class="desktop-icon" style="left:20px; top:200px;" onclick="openWindow('explorer')">
+                <span class="icon">📁</span>Files
+            </div>
+            <div class="desktop-icon" style="left:20px; top:290px;" onclick="openWindow('about')">
+                <span class="icon">ℹ️</span>About
+            </div>
+
+            <!-- 📝 NOTEPAD WINDOW -->
+            <div id="notepad" class="window" style="left:60px; top:40px; width:400px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>📝 Notepad</span>
+                    <button class="close-btn" onclick="closeWindow('notepad')">✕</button>
+                </div>
+                <div class="window-body">
+                    <textarea placeholder="Type something..."></textarea>
+                </div>
+            </div>
+
+            <!-- 🧮 CALCULATOR WINDOW -->
+            <div id="calculator" class="window" style="left:200px; top:100px; width:280px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>🧮 Calculator</span>
+                    <button class="close-btn" onclick="closeWindow('calculator')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div class="calc-display" id="calc-display">0</div>
+                    <div class="calc-grid">
+                        <button onclick="calcPress('7')">7</button>
+                        <button onclick="calcPress('8')">8</button>
+                        <button onclick="calcPress('9')">9</button>
+                        <button class="op" onclick="calcPress('/')">÷</button>
+                        <button onclick="calcPress('4')">4</button>
+                        <button onclick="calcPress('5')">5</button>
+                        <button onclick="calcPress('6')">6</button>
+                        <button class="op" onclick="calcPress('*')">×</button>
+                        <button onclick="calcPress('1')">1</button>
+                        <button onclick="calcPress('2')">2</button>
+                        <button onclick="calcPress('3')">3</button>
+                        <button class="op" onclick="calcPress('-')">−</button>
+                        <button onclick="calcPress('0')">0</button>
+                        <button onclick="calcPress('.')">.</button>
+                        <button class="eq" onclick="calcPress('=')">=</button>
+                        <button class="op" onclick="calcPress('+')">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📁 FILE EXPLORER -->
+            <div id="explorer" class="window" style="left:120px; top:80px; width:400px; height:300px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>📁 File Explorer</span>
+                    <button class="close-btn" onclick="closeWindow('explorer')">✕</button>
+                </div>
+                <div class="window-body">
+                    <div style="color:#888; font-size:0.8rem; margin-bottom:10px;">📂 C:\Documents</div>
+                    <div class="file-list">
+                        <div class="file-item" onclick="alert('📄 Opening: readme.txt\n\nWelcome to your simulated PC!')">
+                            <span class="icon">📄</span>
+                            <span class="name">readme.txt</span>
+                        </div>
+                        <div class="file-item" onclick="alert('📁 Opening: Projects folder...')">
+                            <span class="icon">📁</span>
+                            <span class="name">Projects</span>
+                        </div>
+                        <div class="file-item" onclick="alert('🖼️ Opening: wallpaper.jpg')">
+                            <span class="icon">🖼️</span>
+                            <span class="name">wallpaper.jpg</span>
+                        </div>
+                        <div class="file-item" onclick="alert('🎵 Playing: ambient.mp3 (just kidding, no audio!)')">
+                            <span class="icon">🎵</span>
+                            <span class="name">ambient.mp3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ℹ️ ABOUT WINDOW -->
+            <div id="about" class="window" style="left:250px; top:120px; width:300px;">
+                <div class="window-header" onmousedown="startDrag(event, this.parentElement)">
+                    <span>ℹ️ About</span>
+                    <button class="close-btn" onclick="closeWindow('about')">✕</button>
+                </div>
+                <div class="window-body" style="text-align:center;">
+                    <div style="font-size:3rem; margin-bottom:10px;">🖥️</div>
+                    <h3 style="color:#00f3ff;">Simulated PC</h3>
+                    <p style="color:#888; font-size:0.8rem; margin:10px 0;">Version 1.0</p>
+                    <p style="color:#666; font-size:0.75rem;">A fully functional desktop simulation<br>running entirely in your browser.</p>
+                    <div style="margin-top:15px; color:#555; font-size:0.7rem; border-top:1px solid #333; padding-top:10px;">
+                        🖱️ Drag windows by their title bars
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🗄️ TASKBAR -->
+            <div id="taskbar">
+                <button class="task-btn" onclick="openWindow('notepad')">📝 Notepad</button>
+                <button class="task-btn" onclick="openWindow('calculator')">🧮 Calc</button>
+                <button class="task-btn" onclick="openWindow('explorer')">📁 Files</button>
+                <button class="task-btn" onclick="openWindow('about')">ℹ️ About</button>
+                <button class="task-btn" onclick="shutdown()" style="background:#550a1a; border-color:#ff0055;">⏻ Shutdown</button>
+                <span class="clock" id="clock">00:00</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 🚀 BOOT SEQUENCE
+        // ========================================
+        let bootFill = document.getElementById('boot-fill');
+        let bootStatus = document.getElementById('boot-status');
+        let bootProgress = 0;
+
+        const bootMessages = [
+            'Loading kernel modules...',
+            'Initializing file system...',
+            'Mounting C: drive...',
+            'Loading desktop environment...',
+            'Starting taskbar services...',
+            'System ready!'
+        ];
+
+        function boot() {
+            bootProgress += 2 + Math.random() * 3;
+            if (bootProgress > 100) bootProgress = 100;
+            bootFill.style.width = bootProgress + '%';
+            
+            let msgIndex = Math.floor((bootProgress / 100) * bootMessages.length);
+            if (msgIndex >= bootMessages.length) msgIndex = bootMessages.length - 1;
+            bootStatus.textContent = bootMessages[msgIndex];
+
+            if (bootProgress < 100) {
+                setTimeout(boot, 80 + Math.random() * 100);
+            } else {
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                }, 400);
+            }
+        }
+
+        // ========================================
+        // 🪟 WINDOW MANAGEMENT
+        // ========================================
+        let zIndexCounter = 10;
+
+        function openWindow(id) {
+            const win = document.getElementById(id);
+            if (!win) return;
+            win.style.display = 'flex';
+            win.style.zIndex = ++zIndexCounter;
+            // Center if not positioned
+            if (!win.style.left || win.style.left === '0px') {
+                const rect = win.getBoundingClientRect();
+                const monitor = document.getElementById('monitor');
+                win.style.left = (monitor.clientWidth / 2 - rect.width / 2) + 'px';
+                win.style.top = (monitor.clientHeight / 2 - rect.height / 2) + 'px';
+            }
+            updateTaskbar();
+        }
+
+        function closeWindow(id) {
+            const win = document.getElementById(id);
+            if (win) win.style.display = 'none';
+            updateTaskbar();
+        }
+
+        function toggleWindow(id) {
+            const win = document.getElementById(id);
+            if (win.style.display === 'flex') {
+                closeWindow(id);
+            } else {
+                openWindow(id);
+            }
+        }
+
+        function updateTaskbar() {
+            document.querySelectorAll('.task-btn').forEach(btn => {
+                const id = btn.textContent.trim().toLowerCase().replace(/[^a-z]/g, '');
+                const win = document.getElementById(id === 'calc' ? 'calculator' : 
+                                                       id === 'files' ? 'explorer' : 
+                                                       id === 'about' ? 'about' : 
+                                                       id === 'notepad' ? 'notepad' : null);
+                if (win) {
+                    btn.classList.toggle('active', win.style.display === 'flex');
+                }
+            });
+        }
+
+        // ========================================
+        // 🖱️ WINDOW DRAGGING
+        // ========================================
+        let dragData = null;
+
+        function startDrag(e, windowEl) {
+            if (e.target.classList.contains('close-btn')) return;
+            const rect = windowEl.getBoundingClientRect();
+            dragData = {
+                el: windowEl,
+                offsetX: e.clientX - rect.left,
+                offsetY: e.clientY - rect.top
+            };
+            windowEl.style.zIndex = ++zIndexCounter;
+            e.preventDefault();
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (!dragData) return;
+            const monitor = document.getElementById('monitor');
+            const mRect = monitor.getBoundingClientRect();
+            let x = e.clientX - mRect.left - dragData.offsetX;
+            let y = e.clientY - mRect.top - dragData.offsetY;
+            x = Math.max(0, Math.min(x, monitor.clientWidth - dragData.el.offsetWidth));
+            y = Math.max(0, Math.min(y, monitor.clientHeight - dragData.el.offsetHeight));
+            dragData.el.style.left = x + 'px';
+            dragData.el.style.top = y + 'px';
+        });
+
+        document.addEventListener('mouseup', () => { dragData = null; });
+
+        // ========================================
+        // 🧮 CALCULATOR ENGINE
+        // ========================================
+        let calcDisplay = document.getElementById('calc-display');
+        let calcExpression = '';
+
+        function calcPress(value) {
+            if (value === '=') {
+                try {
+                    let result = Function('"use strict"; return (' + calcExpression + ')')();
+                    calcDisplay.textContent = result;
+                    calcExpression = String(result);
+                } catch(e) {
+                    calcDisplay.textContent = 'Error';
+                    calcExpression = '';
+                }
+            } else if (value === 'C') {
+                calcExpression = '';
+                calcDisplay.textContent = '0';
+            } else {
+                calcExpression += value;
+                calcDisplay.textContent = calcExpression;
+            }
+        }
+
+        // Keyboard support for calculator
+        document.addEventListener('keydown', (e) => {
+            const calc = document.getElementById('calculator');
+            if (calc.style.display !== 'flex') return;
+            const key = e.key;
+            if ('0123456789.+-*/'.includes(key)) {
+                calcPress(key);
+                e.preventDefault();
+            } else if (key === 'Enter') {
+                calcPress('=');
+                e.preventDefault();
+            } else if (key === 'Backspace') {
+                calcExpression = calcExpression.slice(0, -1);
+                calcDisplay.textContent = calcExpression || '0';
+                e.preventDefault();
+            } else if (key === 'Escape') {
+                calcPress('C');
+                e.preventDefault();
+            }
+        });
+
+        // ========================================
+        // 🕐 CLOCK
+        // ========================================
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = 
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ========================================
+        // ⏻ SHUTDOWN
+        // ========================================
+        function shutdown() {
+            if (confirm('⚠️ Shut down the system?')) {
+                const bootScreen = document.getElementById('boot-screen');
+                bootScreen.style.display = 'flex';
+                bootScreen.querySelector('.logo').textContent = '⏻';
+                bootScreen.querySelector('h2').textContent = 'SYSTEM SHUTDOWN';
+                bootStatus.textContent = 'Saving system state...';
+                bootFill.style.width = '0%';
+                
+                // Close all windows
+                document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
+                
+                let progress = 0;
+                const shutdownInterval = setInterval(() => {
+                    progress += 5;
+                    bootFill.style.width = progress + '%';
+                    if (progress > 100) {
+                        clearInterval(shutdownInterval);
+                        setTimeout(() => {
+                            bootScreen.querySelector('.logo').textContent = '🖥️';
+                            bootScreen.querySelector('h2').textContent = 'SYSTEM BOOT';
+                            bootStatus.textContent = 'Loading kernel modules...';
+                            bootFill.style.width = '0%';
+                            bootProgress = 0;
+                            boot();
+                        }, 300);
+                    }
+                }, 100);
+            }
+        }
+
+        // ========================================
+        // 🚀 START BOOT
+        // ========================================
+        boot();
+    </script>
+
+</body>
+</html>
