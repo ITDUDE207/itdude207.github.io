@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>⏳ Sand Excavation Sandbox</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0908; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+        #hud { position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.85); padding: 10px; border-radius: 4px; border: 1px solid #ffaa00; color: #ffaa00; font-size: 0.8rem; pointer-events: none; line-height: 1.4; z-index: 10; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        ⏳ CELLULAR EXCAVATION ENGINE<br>
+        🪓 DRAG MOUSE TO CARVE CHANNELS<br>
+        💧 WATER TRICKLES GENERATING IN REAL-TIME
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        const SCALE = 4; // Cell voxel pixel resolution scale tracking
+        let W, H, gridW, gridH, grid, isDrawing = false, mx = 0, my = 0, ac = null;
+
+        // Voxel matrix definitions
+        const EMPTY = 0, SAND = 1, WATER = 2;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            gridW = Math.ceil(W / SCALE);
+            gridH = Math.ceil(H / SCALE);
+            
+            // Allocate dense cellular state grid track arrays
+            grid = new Uint8Array(gridW * gridH);
+
+            // Populate bottom half of screen container box with thick excavator sand blocks
+            for (let y = Math.floor(gridH * 0.45); y < gridH; y++) {
+                for (let x = 0; x < gridW; x++) {
+                    grid[y * gridW + x] = SAND;
+                }
+            }
+        }
+        window.addEventListener('resize', resize); resize();
+
+        function playDigTone() {
+            try {
+                if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'triangle'; o.frequency.setValueAtTime(90 + Math.random() * 40, ac.currentTime);
+                g.gain.setValueAtTime(0.015, ac.currentTime);
+                o.connect(g); g.connect(ac.destination);
+                o.start(); o.stop(ac.currentTime + 0.04);
+            } catch(e) {}
+        }
+
+        // 🧠 Core Cellular Automata Dual-Element Physics Simulator Loops
+        function simulateGrid() {
+            // Process backwards from bottom corner to prevent double updates per execution frame step
+            for (let y = gridH - 1; y >= 0; y--) {
+                for (let x = 0; x < gridW; x++) {
+                    let idx = y * gridW + x;
+                    let type = grid[idx];
+
+                    if (type === EMPTY) continue;
+
+                    // 1. SOLID GRANULAR SAND RULES MATRIX
+                    if (type === SAND) {
+                        let down = idx + gridW;
+                        if (y < gridH - 1 && grid[down] === EMPTY) {
+                            grid[down] = SAND; grid[idx] = EMPTY;
+                        } else if (y < gridH - 1 && grid[down] === WATER) {
+                            // Heavy sand sinks through buoyant liquid water configurations smoothly
+                            grid[down] = SAND; grid[idx] = WATER;
+                        } else {
+                            // Tumbles down diagonal slopes randomly if base is obstructed
+                            let dir = Math.random() < 0.5 ? -1 : 1;
+                            let diag1 = down + dir, diag2 = down - dir;
+                            if (y < gridH - 1 && x + dir >= 0 && x + dir < gridW && grid[diag1] === EMPTY) {
+                                grid[diag1] = SAND; grid[idx] = EMPTY;
+                            } else if (y < gridH - 1 && x - dir >= 0 && x - dir < gridW && grid[diag2] === EMPTY) {
+                                grid[diag2] = SAND; grid[idx] = EMPTY;
+                            }
+                        }
+                    }
+
+                    // 2. VISCOUS LIQUID FLUID WATER RULES MATRIX
+                    else if (type === WATER) {
+                        let down = idx + gridW;
+                        if (y < gridH - 1 && grid[down] === EMPTY) {
+                            grid[down] = WATER; grid[idx] = EMPTY;
+                        } else {
+                            // Cascade diagonally down out of stacks
+                            let dir = Math.random() < 0.5 ? -1 : 1;
+                            let diag1 = down + dir, diag2 = down - dir;
+                            let side1 = idx + dir, side2 = idx - dir;
+
+                            if (y < gridH - 1 && x + dir >= 0 && x + dir < gridW && grid[diag1] === EMPTY) {
+                                grid[diag1] = WATER; grid[idx] = EMPTY;
+                            } else if (y < gridH - 1 && x - dir >= 0 && x - dir < gridW && grid[diag2] === EMPTY) {
+                                grid[diag2] = WATER; grid[idx] = EMPTY;
+                            } 
+                            // Equal lateral dispersion loops make liquid spread perfectly flat in pools
+                            else if (x + dir >= 0 && x + dir < gridW && grid[side1] === EMPTY) {
+                                grid[side1] = WATER; grid[idx] = EMPTY;
+                            } else if (x - dir >= 0 && x - dir < gridW && grid[side2] === EMPTY) {
+                                grid[side2] = WATER; grid[idx] = EMPTY;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 💧 Continuously emitter inject water droplets from upper window lanes
+            for (let k = 0; k < 2; k++) {
+                let spawnX = Math.floor(gridW * 0.2) + Math.floor(Math.random() * (gridW * 0.6));
+                if (grid[spawnX] === EMPTY) grid[spawnX] = WATER;
+            }
+        }
+
+        // 🪓 Mouse Drag Eraser Mapping Logic
+        function clearBrush() {
+            if (!isDrawing) return;
+            let gx = Math.floor(mx / SCALE), gy = Math.floor(my / SCALE);
+            let brushRadius = 5;
+
+            // Clear cells out inside brush mask profile limits
+            for (let dy = -brushRadius; dy <= brushRadius; dy++) {
+                for (let dx = -brushRadius; dx <= brushRadius; dx++) {
+                    if (dx*dx + dy*dy <= brushRadius*brushRadius) {
+                        let nx = gx + dx, ny = gy + dy;
+                        if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
+                            let bIdx = ny * gridW + nx;
+                            if (grid[bIdx] === SAND) { grid[bIdx] = EMPTY; if(Math.random()>0.85) playDigTone(); }
+                            else if (grid[bIdx] === WATER) grid[bIdx] = EMPTY;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 🎨 Optimized Canvas Graphics Rasterizer Frame Buffer Loop
+        function draw() {
+            simulateGrid();
+            clearBrush();
+
+            // Clear framework screen directly without filling to preserve pipeline throughput speed
+            ctx.fillStyle = '#0b0908'; ctx.fillRect(0, 0, W, H);
+
+            // Traverse and stamp cell values natively to hardware rendering layouts
+            for (let y = 0; y < gridH; y++) {
+                for (let x = 0; x < gridW; x++) {
+                    let val = grid[y * gridW + x];
+                    if (val === EMPTY) continue;
+
+                    ctx.fillStyle = val === SAND ? '#eec590' : '#00b3ff'; // Warm golden sand vs deep neon aqua cyan
+                    ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // 🖱️ Event Capture Intercept Lines
+        function updateMouseCoord(e) { const r = canvas.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; }
+        window.addEventListener('mousedown', (e) => { isDrawing = true; updateMouseCoord(e); });
+        window.addEventListener('mousemove', (e) => { updateMouseCoord(e); });
+        window.addEventListener('mouseup', () => isDrawing = false);
+
+        // Run engines instantly
+        draw();
+    </script>
+</body>
+</html>
