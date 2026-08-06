@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🧩 3D Isometric Domino Cascade</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #08080d; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+        #hud { position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border: 1px solid #00f3ff; color: #00f3ff; font-size: 0.8rem; pointer-events: none; line-height: 1.4; z-index: 10; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        🧩 3D ISOMETRIC DOMINO CASCADE<br>
+        🎛️ DRAG MOUSE TO ALIGN DOMINO PATHS<br>
+        💥 CLICK FIRST TILE TO TRIGGER COLLAPSE RIPPLE
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H, dominoes = [], isDrawing = false, isCollapsing = false;
+        let lastX = 0, lastY = 0, audioCtx = null;
+
+        // 📐 Isometric Orthographic Projection Vector Conversion Math
+        // Converts 2D flat coordinates to angled 3D projection grid systems
+        function isoProject(x, y, z = 0) {
+            return {
+                x: (x - y) * Math.cos(Math.PI / 6) + W / 2,
+                y: (x + y) * Math.sin(Math.PI / 6) - z + H / 4
+            };
+        }
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize); resize();
+
+        function playChime(freq) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'triangle'; 
+                o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                // Crystal pure chime exponential sound decay envelope properties
+                g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.4);
+            } catch(e) {}
+        }
+
+        // 🎨 3D Isometric Polygonal Box Drawing Primitive Function
+        function drawDominoBlock(x, y, angle, tilt = 0, isActive = false) {
+            const w = 10, l = 22, h = 38; // Structural tile bounding dimensions
+            
+            // Build rotational coordinates frames offset scalars matching placement paths
+            const cos = Math.cos(angle), sin = Math.sin(angle);
+            
+            // Base local coordinate array limits
+            let pts = [
+                {x: -w, y: -l, z: 0}, {x: w, y: -l, z: 0}, {x: w, y: l, z: 0}, {x: -w, y: l, z: 0},
+                {x: -w, y: -l, z: h}, {x: w, y: -l, z: h}, {x: w, y: l, z: h}, {x: -w, y: l, z: h}
+            ];
+
+            // Apply forward kinetic tipping tilt deformers if ripple index is activated
+            let projectedPts = pts.map(p => {
+                let rx = p.x * cos - p.y * sin;
+                let ry = p.x * sin + p.y * cos;
+                let rz = p.z;
+
+                if (tilt > 0 && p.z > 0) {
+                    // Shifting higher node coordinate vectors along tilt angle trajectories
+                    rx += Math.cos(angle + Math.PI/2) * (p.z * Math.sin(tilt));
+                    ry += Math.sin(angle + Math.PI/2) * (p.z * Math.sin(tilt));
+                    rz = p.z * Math.cos(tilt);
+                }
+
+                return isoProject(x + rx, y + ry, rz);
+            });
+
+            // Polygonal Face indexing maps
+            const drawFace = (p0, p1, p2, p3, fill) => {
+                ctx.fillStyle = fill; ctx.beginPath();
+                ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            };
+
+            ctx.strokeStyle = '#04040a'; ctx.lineWidth = 1;
+            let themeColor = isActive ? '#00ffaa' : '#00f3ff'; // Glow green on impact vs baseline neon cyan
+            
+            // Render basic solid structural 3D face layers with shaded light gradients
+            drawFace(projectedPts[0], projectedPts[1], projectedPts[2], projectedPts[3], '#161622'); // Floor base
+            drawFace(projectedPts[0], projectedPts[1], projectedPts[5], projectedPts[4], '#003344'); // Back wall shaded
+            drawFace(projectedPts[1], projectedPts[2], projectedPts[6], projectedPts[5], '#005577'); // Side wall shaded
+            drawFace(projectedPts[2], projectedPts[3], projectedPts[7], projectedPts[6], themeColor); // Front presentation face
+            drawFace(projectedPts[4], projectedPts[5], projectedPts[6], projectedPts[7], '#0088aa'); // Top face roof
+        }
+
+        // 🧠 Sequential Domino Index Cascade Trigger Engine Loop
+        function cascadeRipple() {
+            if (!isCollapsing) return;
+
+            let activeCount = 0;
+            for (let i = 0; i < dominoes.length; i++) {
+                let d = dominoes[i];
+                
+                // If previous tile has tipped over halfway past threshold coordinates
+                if (i === 0 && d.tilt === 0) { d.tilt = 0.05; playChime(220); }
+                
+                if (d.tilt > 0 && d.tilt < Math.PI / 2.3) {
+                    d.tilt += 0.09; // Tilt tipping animation angular speed tracking
+                    d.active = true;
+                    activeCount++;
+
+                    // Trigger the subsequent neighbor link node once tip rotation clears threshold bounds
+                    if (d.tilt >= Math.PI / 4 && i + 1 < dominoes.length && dominoes[i + 1].tilt === 0) {
+                        dominoes[i + 1].tilt = 0.05;
+                        // Frequency pitch scales higher based on structural matrix path row indexing depths
+                        let targetPitch = 220 + ((i + 1) * 4) % 440;
+                        playChime(targetPitch);
+                    }
+                } else if (d.tilt >= Math.PI / 2.3) {
+                    d.active = false; // Settlement rest lock phase
+                }
+            }
+
+            if (dominoes.length > 0 && dominoes[dominoes.length - 1].tilt >= Math.PI / 2.3 && activeCount === 0) {
+                isCollapsing = false;
+                alert("🏆 CASCADE COMPLETE!\nAll geometric domino channels successfully collapsed.");
+                dominoes = [];
+            }
+        }
+
+        // 🎨 Render Screen Buffer Manager Loop
+        function draw() {
+            cascadeRipple();
+
+            ctx.fillStyle = '#08080d'; ctx.fillRect(0, 0, W, H);
+
+            // Render all active block entities onto vector layers back-to-front
+            dominoes.forEach(d => {
+                drawDominoBlock(d.x, d.y, d.angle, d.tilt, d.active);
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        // 🖱️ Event Grid Spatial Coordinates Captures
+        window.addEventListener('mousedown', (e) => {
+            if (isCollapsing) return;
+            
+            // Inverse mapping: approximate raw isometric grid plane clicks back to flat local variables
+            let isoX = (e.clientX - W / 2) / Math.cos(Math.PI / 6);
+            let isoY = (e.clientY - H / 4) / Math.sin(Math.PI / 6);
+            let localX = (isoX + isoY) / 2;
+            let localY = (isoY - isoX) / 2;
+
+            if (dominoes.length > 0) {
+                // If clicking near the start node while tracks are populated -> Fire cascade
+                let dStart = dominoes[0];
+                if (Math.hypot(dStart.x - localX, dStart.y - localY) < 45) {
+                    isCollapsing = true;
+                    return;
+                }
+            }
+
+            isDrawing = true;
+            lastX = localX; lastY = localY;
+            dominoes.push({ x: localX, y: localY, angle: 0, tilt: 0, active: false });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDrawing || isCollapsing) return;
+
+            let isoX = (e.clientX - W / 2) / Math.cos(Math.PI / 6);
+            let isoY = (e.clientY - H / 4) / Math.sin(Math.PI / 6);
+            let localX = (isoX + isoY) / 2;
+            let localY = (isoY - isoX) / 2;
+
+            let dist = Math.hypot(localX - lastX, localY - lastY);
+            
+            // Standard spacing guard thresholds map perfectly aligned tile lines automatically
+            if (dist > 35) {
+                let placementAngle = Math.atan2(localY - lastY, localX - lastX);
+                dominoes.push({ x: localX, y: localY, angle: placementAngle, tilt: 0, active: false });
+                
+                lastX = localX; lastY = localY;
+                playChime(150);
+            }
+        });
+
+        window.addEventListener('mouseup', () => isDrawing = false);
+
+        // Run instantly
+        draw();
+    </script>
+</body>
+</html>
