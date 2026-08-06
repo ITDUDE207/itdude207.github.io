@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🍉 Ultra-Fluid Liquid Sand</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #070608; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+        #hud { position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border: 1px solid #ff0055; color: #ff0055; font-size: 0.8rem; pointer-events: none; line-height: 1.4; z-index: 10; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        🍉 LIQUID SPH HYDRODYNAMICS ENGINE<br>
+        🌊 CLICK & DRAG TO POUR VISCOUS LIQUID GROUT<br>
+        🎨 COLORS BLEND & MARBLE ON CONTACT
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H, particles = [], isDrawing = false, mx = 0, my = 0, ac = null;
+
+        // 🔬 Hydrodynamic SPH Tuning Variables
+        const MAX_PARTICLES = 1400;
+        const H_RADIUS = 28;         // Kernel smoothing interaction radius
+        const H_RADIUS_SQ = H_RADIUS * H_RADIUS;
+        const GRAVITY = 0.22;        // Vertical gravity scalar push
+        const STIFFNESS = 0.15;      // Liquid pressure stiffness tracking
+        const REST_DENSITY = 4.0;    // Fluid resting density equilibrium target
+        const VISCOSITY = 0.08;      // Sloshing friction dampening multiplier
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize); resize();
+
+        function playFluidSynth() {
+            try {
+                if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(140 + Math.random() * 60, ac.currentTime);
+                g.gain.setValueAtTime(0.01, ac.currentTime);
+                o.connect(g); g.connect(ac.destination);
+                o.start(); o.stop(ac.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // 🧠 Core SPH Hydrodynamics Approximation Simulation Loop
+        function simulateFluids() {
+            const num = particles.length;
+
+            // Step 1: Compute Localized Particle Density Fields
+            for (let i = 0; i < num; i++) {
+                let p = particles[i];
+                p.density = 0;
+                
+                // Scan adjacent neighbors inside spatial interaction thresholds
+                for (let j = 0; j < num; j++) {
+                    let dx = particles[j].x - p.x;
+                    let dy = particles[j].y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < H_RADIUS_SQ) {
+                        // Standard cubic spline kernel density weight contribution
+                        p.density += Math.pow(H_RADIUS_SQ - distSq, 3);
+                    }
+                }
+                // Calculate pressure using ideal gas state formulation strings
+                p.pressure = STIFFNESS * (p.density - REST_DENSITY);
+            }
+
+            // Step 2: Resolve Interaction Forces (Pressure + Viscosity Vectors)
+            for (let i = 0; i < num; i++) {
+                let p = particles[i];
+                let fx = 0, fy = GRAVITY; // Inject default gravity bias down the loop
+
+                for (let j = 0; j < num; j++) {
+                    if (i === j) continue;
+                    let pj = particles[j];
+                    let dx = pj.x - p.x;
+                    let dy = pj.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < H_RADIUS_SQ && distSq > 0) {
+                        let dist = Math.sqrt(distSq);
+                        let dirX = dx / dist, dirY = dy / dist;
+                        let weight = H_RADIUS - dist;
+
+                        // Pressure Force Vector Additions
+                        let pForce = (p.pressure + pj.pressure) * Math.pow(weight, 2);
+                        fx -= dirX * pForce * 0.005;
+                        fy -= dirY * pForce * 0.005;
+
+                        // Viscosity Dampening Vector Additions
+                        let rvx = pj.vx - p.vx, rvy = pj.vy - p.vy;
+                        fx += rvx * weight * VISCOSITY * 0.02;
+                        fy += rvy * weight * VISCOSITY * 0.02;
+                    }
+                }
+
+                p.vx += fx; p.vy += fy;
+                p.x += p.vx; p.y += p.vy;
+
+                // 🧱 Bounding Screen Box Collision Damping Bounds
+                const r = 6;
+                if (p.x < r) { p.x = r; p.vx *= -0.3; }
+                if (p.x > W - r) { p.x = W - r; p.vx *= -0.3; }
+                if (p.y < r) { p.y = r; p.vy *= -0.3; }
+                if (p.y > H - r) { p.y = H - r; p.vy *= -0.3; }
+            }
+        }
+
+        // 🎨 Optimized Canvas Graphics Rasterizer
+        function draw() {
+            simulateFluids();
+
+            // Continuous streaming injector spawns elements when dragging
+            if (isDrawing && particles.length < MAX_PARTICLES) {
+                // Alternates color hues sequentially based on time tracks
+                let hue = (performance.now() * 0.1) % 360;
+                for (let k = 0; k < 3; k++) {
+                    particles.push({
+                        x: mx + (Math.random() - 0.5) * 20,
+                        y: my + (Math.random() - 0.5) * 20,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: Math.random() * 2,
+                        col: `hsla(${hue}, 100%, 60%, 0.85)`,
+                        density: 0, pressure: 0
+                    });
+                }
+                if (Math.random() > 0.85) playFluidSynth();
+            }
+
+            ctx.fillStyle = 'rgba(7, 6, 8, 0.25)'; // Liquid trailing paths ghosting
+            ctx.fillRect(0, 0, W, H);
+
+            // Stamp individual fluid particle spheres directly onto drawing canvases
+            ctx.shadowBlur = 4;
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                ctx.fillStyle = p.col;
+                ctx.shadowColor = p.col;
+                
+                // Draw cells as slightly overlapping blobs to build a cohesive fluid skin appearance
+                ctx.fillRect(p.x - 3, p.y - 3, 7, 7);
+            }
+            ctx.shadowBlur = 0; // Reset shading caches
+
+            requestAnimationFrame(draw);
+        }
+
+        // 🖱️ Event Capture Trackers
+        function updateMouse(e) { mx = e.clientX; my = e.clientY; }
+        window.addEventListener('mousedown', (e) => { isDrawing = true; updateMouse(e); });
+        window.addEventListener('mousemove', (e) => { updateMouse(e); });
+        window.addEventListener('mouseup', () => isDrawing = false);
+        window.addEventListener('mouseout', () => isDrawing = false);
+
+        // Execute setups instantly
+        draw();
+    </script>
+</body>
+</html>
