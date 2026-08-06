@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🌌 Galactic Black Hole Gravity Sandbox</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #030306; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H, stars = [], mx = -1000, my = -1000, isDragging = false, ac = null;
+        
+        const NUM_STARS = 20000; // Scaled up to 20,000 points simultaneously
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            stars = [];
+            // Distribute 20,000 stardust nodes evenly across the coordinate frame mesh
+            for (let i = 0; i < NUM_STARS; i++) {
+                stars.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    color: `hsl(${180 + Math.random() * 60}, 100%, ${70 + Math.random() * 30}%)` // Cosmic cyan/blue stardust
+                });
+            }
+        }
+        window.addEventListener('resize', resize); resize();
+
+        function playGravityDrone(freq) {
+            try {
+                if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(freq, ac.currentTime);
+                g.gain.setValueAtTime(0.01, ac.currentTime);
+                o.connect(g); g.connect(ac.destination);
+                o.start(); o.stop(ac.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // 🧠 High-Performance Gravitational Vector Singularity Engine Loop
+        function loop() {
+            // Semi-transparent overlay layer builds fluid cosmic light trails smoothly
+            ctx.fillStyle = 'rgba(3, 3, 6, 0.22)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Fetch current buffer data straight to hardware context caches
+            ctx.fillStyle = '#fff';
+
+            for (let i = 0; i < stars.length; i++) {
+                const s = stars[i];
+
+                if (isDragging) {
+                    let dx = mx - s.x;
+                    let dy = my - s.y;
+                    let distSq = dx * dx + dy * dy; // Optimized squared distance maps bypass heavy Math.sqrt calls
+
+                    if (distSq > 10) {
+                        let dist = Math.sqrt(distSq);
+                        
+                        // 1. Inverse Distance Gravity: Acceleration scales higher as particles get closer
+                        let force = Math.min(3.5, 750 / distSq); 
+                        let angle = Math.atan2(dy, dx);
+                        
+                        // 2. Angular Torque Cross-Product: Forces particles into a spinning accretion disc ring
+                        let torqueX = -Math.sin(angle) * force * 1.1;
+                        let torqueY = Math.cos(angle) * force * 1.1;
+
+                        s.vx += Math.cos(angle) * force + torqueX;
+                        s.vy += Math.sin(angle) * force + torqueY;
+
+                        // Event horizon suction: recycle particles that plunge straight into the singularity hole center
+                        if (dist < 8) {
+                            let respawnAngle = Math.random() * Math.PI * 2;
+                            let respawnDist = Math.max(W, H) * (0.4 + Math.random() * 0.2);
+                            s.x = mx + Math.cos(respawnAngle) * respawnDist;
+                            s.y = my + Math.sin(respawnAngle) * respawnDist;
+                            s.vx = (Math.random() - 0.5) * 0.5;
+                            s.vy = (Math.random() - 0.5) * 0.5;
+                            continue;
+                        }
+                    }
+                }
+
+                // 3. Update velocity trajectories frame by frame
+                s.vx *= 0.975; s.vy *= 0.975; // Friction dampening prevents immediate vector decay
+                s.x += s.vx; s.y += s.vy;
+
+                // Border wraps
+                if (s.x < 0) s.x = W; if (s.x > W) s.x = 0;
+                if (s.y < 0) s.y = H; if (s.y > H) s.y = 0;
+
+                // Render micro particle node point
+                ctx.fillStyle = s.color;
+                ctx.fillRect(s.x, s.y, 1.2, 1.2);
+            }
+
+            // 🕳️ Draw active central event horizon singularity graphic layer
+            if (isDragging) {
+                ctx.shadowBlur = 25; ctx.shadowColor = '#00f3ff';
+                ctx.fillStyle = '#000'; ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(mx, my, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.shadowBlur = 0; // Reset canvas glow buffer state
+                if (Math.random() > 0.85) playGravityDrone(60 + Math.random() * 15);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // 🖱️ Event Capture Processing Hooks
+        window.addEventListener('mousedown', (e) => { isDragging = true; mx = e.clientX; my = e.clientY; });
+        window.addEventListener('mousemove', (e) => { if (isDragging) { mx = e.clientX; my = e.clientY; } });
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('mouseout', () => isDragging = false);
+
+        // Run instantly
+        loop();
+    </script>
+</body>
+</html>
