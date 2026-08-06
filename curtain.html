@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🧵 Verlet String Curtain Sandbox</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #08080c; font-family: monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+        #hud { position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border: 1px solid #cc00ff; color: #cc00ff; font-size: 0.8rem; pointer-events: none; line-height: 1.4; z-index: 10; font-weight: bold; box-shadow: 0 0 15px #000; }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        🧵 VERLET MASS-SPRING CURTAIN<br>
+        🌊 HOVER MOUSE TO WAVE THE FABRIC<br>
+        ⚔️ HOLD CLICK TO SLICE & RIP STRINGS
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H, points = [], constraints = [];
+        let mx = -1000, my = -1000, px = -1000, py = -1000, isMouseDown = false, ac = null;
+
+        // 🔬 Physics Constraints Configuration
+        const COLS = 45;              // Horizontal density lines
+        const ROWS = 28;              // Vertical line segments
+        const SPACING_X = 16;         // Resting distance width
+        const SPACING_Y = 16;         // Resting distance height
+        const GRAVITY = 0.25;         // Downward physics pull
+        const FRICTION = 0.99;        // Air resistance dampening scalar
+        const ITERATIONS = 4;         // Rigidity math solver passes per frame
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            
+            points = [];
+            constraints = [];
+            
+            let startX = (W - (COLS - 1) * SPACING_X) / 2;
+            let startY = 40;
+
+            // 1. Structural Lattice Mesh Node Generation Loop
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    let px = startX + x * SPACING_X;
+                    let py = startY + y * SPACING_Y;
+                    points.push({
+                        x: px, y: py,
+                        px: px, py: py, // Previous coordinates track velocity vectors
+                        isPinned: y === 0 // Hard-lock the top row elements to the sky ceiling
+                    });
+
+                    // 2. Map Cross-Stitch Elastic Grid Link Intersections
+                    if (x > 0) constraints.push({ p0: points[points.length - 1], p1: points[points.length - 2], len: SPACING_X, active: true });
+                    if (y > 0) constraints.push({ p0: points[points.length - 1], p1: points[points.length - 1 - COLS], len: SPACING_Y, active: true });
+                }
+            }
+        }
+        window.addEventListener('resize', resize); resize();
+
+        function playSliceTone() {
+            try {
+                if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+                let o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(600 + Math.random() * 300, ac.currentTime);
+                o.frequency.exponentialRampToValueAtTime(100, ac.currentTime + 0.05);
+                g.gain.setValueAtTime(0.01, ac.currentTime);
+                o.connect(g); g.connect(ac.destination);
+                o.start(); o.stop(ac.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // 🧠 Verlet Integration Coordinate Tracking Solver
+        function updatePhysics() {
+            // Step 1: Update Node Positions via Acceleration Forces
+            for (let i = 0; i < points.length; i++) {
+                let p = points[i];
+                if (p.isPinned) continue;
+
+                // Extract velocity using current minus previous position histories
+                let vx = (p.x - p.px) * FRICTION;
+                let vy = (p.y - p.py) * FRICTION;
+
+                // Mouse interaction interaction radius checks
+                let dx = mx - p.x, dy = my - p.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist < 75) {
+                    let force = (75 - dist) * 0.12;
+                    let angle = Math.atan2(dy, dx);
+                    // Push particles dynamically away from cursor path tracking
+                    vx -= Math.cos(angle) * force;
+                    vy -= Math.sin(angle) * force;
+                }
+
+                p.px = p.x; p.py = p.y;
+                p.x += vx; p.y += vy + GRAVITY; // Add vertical vector acceleration variables
+            }
+
+            // Step 2: Slice Constraints Interception Matrix Checking
+            if (isMouseDown && px !== -1000) {
+                for (let i = 0; i < constraints.length; i++) {
+                    let c = constraints[i];
+                    if (!c.active) continue;
+
+                    // Verify line segment intersections between your drag line and the fabric string grid links
+                    let x1 = c.p0.x, y1 = c.p0.y, x2 = c.p1.x, y2 = c.p1.y;
+                    let x3 = px, y3 = py, x4 = mx, y4 = my;
+
+                    let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+                    if (den !== 0) {
+                        let t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+                        let u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
+                        if (t > 0 && t < 1 && u > 0 && u < 1) {
+                            c.active = false; // Sever link layer node parameters completely
+                            playSliceTone();
+                        }
+                    }
+                }
+            }
+            px = mx; py = my; // Update cursor drag memory bounds
+
+            // Step 3: Solve Distance Elasticity Constraints Passes
+            for (let k = 0; k < ITERATIONS; k++) {
+                for (let i = 0; i < constraints.length; i++) {
+                    let c = constraints[i];
+                    if (!c.active) continue;
+
+                    let dx = c.p1.x - c.p0.x;
+                    let dy = c.p1.y - c.p0.y;
+                    let dist = Math.hypot(dx, dy);
+                    let diff = c.len - dist;
+                    let percent = (diff / dist) * 0.5;
+                    let offsetX = dx * percent;
+                    let offsetY = dy * percent;
+
+                    // Pull or push points towards equilibrium length metrics smoothly
+                    if (!c.p0.isPinned) { c.p0.x -= offsetX; c.p0.y -= offsetY; }
+                    if (!c.p1.isPinned) { c.p1.x += offsetX; c.p1.y += offsetY; }
+                }
+            }
+        }
+
+        // 🎨 Graphic Rasterization Vector Renderer
+        function draw() {
+            updatePhysics();
+
+            ctx.fillStyle = '#08080c'; ctx.fillRect(0, 0, W, H);
+
+            // Set up hardware additive color blending for glowing luminescent string aesthetics
+            ctx.globalCompositeOperation = 'screen';
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 3;
+
+            for (let i = 0; i < constraints.length; i++) {
+                let c = constraints[i];
+                if (!c.active) continue;
+
+                // Shifting color spectrum lines based on height vectors to build gradient fabrics
+                let hue = (c.p0.y * 0.2) % 360;
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.55)`;
+                ctx.shadowColor = ctx.strokeStyle;
+
+                ctx.beginPath();
+                ctx.moveTo(c.p0.x, c.p0.y);
+                ctx.lineTo(c.p1.x, c.p1.y);
+                ctx.stroke();
+            }
+            
+            // Reset graphics blending variables safe for subsequent layers
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.shadowBlur = 0;
+
+            requestAnimationFrame(draw);
+        }
+
+        // 🖱️ Event Capture Analytics
+        function updateMouse(e) { mx = e.clientX; my = e.clientY; }
+        window.addEventListener('mousedown', (e) => { isMouseDown = true; updateMouse(e); px = mx; py = my; });
+        window.addEventListener('mousemove', (e) => { updateMouse(e); });
+        window.addEventListener('mouseup', () => { isMouseDown = false; px = -1000; py = -1000; });
+        window.addEventListener('mouseout', () => { mx = -1000; my = -1000; px = -1000; py = -1000; isMouseDown = false; });
+
+        // Run engines instantly
+        draw();
+    </script>
+</body>
+</html>
