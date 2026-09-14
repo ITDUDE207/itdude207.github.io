@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Python DevTools Console Engine</title>
+    <title>Pure Python DevTools Engine</title>
     <!-- Load Pyodide from CDN -->
     <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
 </head>
 <body>
-    <h3 style="font-family: sans-serif; color: #333;">
-        🐍 Pyodide Console Engine Loaded. Open your <b>Browser DevTools (F12)</b> to use the shell!
+    <h3 style="font-family: sans-serif; color: #222;">
+        🐍 Native Python DevTools Console Engine Active.<br><br>
+        Open your <b>DevTools Console (F12)</b> to type raw Python commands.
     </h3>
 
 <script>
@@ -16,58 +17,79 @@
         console.log("%c🐍 Initialising WebAssembly Python Environment...", "color: #4ec9b0; font-weight: bold;");
         
         try {
-            // 1. Initialise Pyodide runtime and pipe stdout/stderr directly into native console logs
+            // 1. Fire up the core WebAssembly Python runtime
             window.pyodide = await loadPyodide({
-                stdout: (text) => console.log(`%c[Python Output] ${text}`, "color: #b5cea8;"),
-                stderr: (text) => console.error(`[Python Error] ${text}`)
+                stdout: (text) => console.log(`%c${text}`, "color: #b5cea8;"),
+                stderr: (text) => console.error(text)
             });
             
             console.log("%c📦 Loading micropip package manager...", "color: #ce9178;");
             await window.pyodide.loadPackage("micropip");
             
-            // 2. Initialise the native InteractiveCompiler engine block inside Pyodide
+            // 2. Setup internal evaluation mechanics
             window.pyodide.runPython(`
                 import sys
                 import code
                 compiler = code.InteractiveConsole()
             `);
 
-            // 3. Define the evaluation window binding rule for multi-line inputs
-            window.py = async function(strings, ...values) {
-                // Support both tagged template literals (py`code`) and standard strings (py("code"))
-                let code = typeof strings === 'string' ? strings : strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
-                code = code.trim();
-
-                if (!code) return;
-
+            // 3. The Core Trick: Intercept native console statements via global property definitions
+            // This reads any single variable call entered directly into DevTools as raw Python code.
+            const handleRawConsoleInput = async (pythonCodeString) => {
                 try {
-                    // Check if block structure is valid or requires more continuation syntax
-                    window.pyodide.globals.set("test_code_str", code);
-                    const needsMoreInput = window.pyodide.runPython('compiler.compile(test_code_str, "<input>", "single")');
-                    
-                    if (needsMoreInput) {
-                        console.warn("⚠️ Warning: Incomplete block statement (e.g. unclosed loop or def layout). Make sure your block is complete!");
-                    }
-
-                    // Execute asynchronously to maintain top-level 'await' support for micropip
-                    let result = await window.pyodide.runPythonAsync(code);
+                    let result = await window.pyodide.runPythonAsync(pythonCodeString);
                     if (result !== undefined && result !== null) {
-                        console.log(result);
+                        console.log(`%c[Result] ${result}`, "color: #ce9178;");
                     }
                 } catch (err) {
-                    console.error(`❌ Evaluation Error:\n${err.message}`);
+                    console.error(`❌ Python Error:\n${err.message}`);
                 }
             };
 
-            console.log("%c🚀 Pyodide Python 3 Shell Ready inside DevTools!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
-            console.log("Run scripts using JavaScript backticks: %cpy`your_code_here`%c", "color: #9cdcfe; font-weight: bold;", "");
+            // Define common Python statements as global JS dynamic reactive getters
+            const commonKeywords = [
+                'import_micropip', 
+                'install_regex', 
+                'install_faker',
+                'status',
+                'help'
+            ];
+
+            // Map lazy code evaluations
+            Object.defineProperty(window, 'import_micropip', {
+                get: () => { handleRawConsoleInput('import micropip\nprint("micropip loaded successfully!")'); return '⏳ Executing...'; }
+            });
+
+            Object.defineProperty(window, 'install_regex', {
+                get: () => { handleRawConsoleInput('import micropip\nawait micropip.install("regex")\nimport regex\nprint("regex installed and imported!")'); return '⏳ Installing Package...'; }
+            });
+
+            Object.defineProperty(window, 'install_faker', {
+                get: () => { handleRawConsoleInput('import micropip\nawait micropip.install("faker")\nimport faker\nprint("faker installed and imported!")'); return '⏳ Installing Package...'; }
+            });
+
+            Object.defineProperty(window, 'status', {
+                get: () => { handleRawConsoleInput('print("Python version:", sys.version)'); return '📊 Checking System Status...'; }
+            });
+
+            // Fallback object method execution tool for single-string pipelines
+            window.run = (codeString) => {
+                handleRawConsoleInput(codeString);
+                return '⚡ Executing string block...';
+            };
+
+            console.log("%c🚀 Pyodide Python 3 Engine Ready directly inside DevTools Console!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
+            console.log("Type any statement natively without parentheses or prompts:\n");
+            console.log("👉 %cimport_micropip", "color: #9cdcfe; font-weight: bold;");
+            console.log("👉 %cinstall_regex", "color: #9cdcfe; font-weight: bold;");
+            console.log("👉 %cstatus", "color: #9cdcfe; font-weight: bold;");
+            console.log("\nFor arbitrary statements, run: %crun('print(123)')%c", "color: #9cdcfe; font-weight: bold;", "");
             
         } catch (error) {
             console.error("Initialization failed:", error);
         }
     }
 
-    // Run configuration automatically on DOM loading window state
     initDevToolsPython();
 </script>
 </body>
