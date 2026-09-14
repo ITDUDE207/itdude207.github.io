@@ -2,200 +2,73 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>In-Browser Python Async REPL with Multi-line Support</title>
-    <!-- Xterm.js Styles and Scripts -->
-    <script src="
-https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js
-"></script>
-<link href="
-https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
-" rel="stylesheet">
-    <!-- Pyodide Core -->
+    <title>Python DevTools Console Engine</title>
+    <!-- Load Pyodide from CDN -->
     <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
-    <style>
-        body { background-color: #1a1a1a; margin: 0; padding: 20px; font-family: monospace; }
-        #terminal-container { width: 100%; height: 85vh; background: #000; padding: 10px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    </style>
 </head>
 <body>
-
-    <div id="terminal-container"></div>
+    <h3 style="font-family: sans-serif; color: #333;">
+        🐍 Pyodide Console Engine Loaded. Open your <b>Browser DevTools (F12)</b> to use the shell!
+    </h3>
 
 <script>
-    let pyodide;
-    
-    // UI Prompt Configurations
-    const PROMPT_PRIMARY = ">>> ";
-    const PROMPT_CONTINUE = "... ";
-    let activePrompt = PROMPT_PRIMARY;
-
-    // Buffer tracking and line storage
-    let currentLine = "";
-    let linesBuffer = [];
-    let commandHistory = [];
-    let historyIndex = -1;
-
-    // Initialize the Terminal UI globally on the window object so Pyodide can see it
-    window.term = new Terminal({
-        cursorBlink: true,
-        fontFamily: 'Courier New, Courier, monospace',
-        fontSize: 14,
-        theme: { background: '#1e1e1e', foreground: '#f8f8f2', cursor: '#f8f8f0' }
-    });
-    term.open(document.getElementById('terminal-container'));
-    term.writeln("Initializing WebAssembly environment. Please wait...");
-
-    // Initialize Pyodide & Micropip
-    async function initPython() {
+    async function initDevToolsPython() {
+        console.log("%c🐍 Initialising WebAssembly Python Environment...", "color: #4ec9b0; font-weight: bold;");
+        
         try {
-            pyodide = await loadPyodide({
-                stdout: (text) => term.writeln(text),
-                stderr: (text) => term.writeln(`\x1b[31m${text}\x1b[0m`)
+            // 1. Initialise Pyodide runtime and pipe stdout/stderr directly into native console logs
+            window.pyodide = await loadPyodide({
+                stdout: (text) => console.log(`%c[Python Output] ${text}`, "color: #b5cea8;"),
+                stderr: (text) => console.error(`[Python Error] ${text}`)
             });
             
-            term.writeln("Loading micropip package manager...");
-            await pyodide.loadPackage("micropip");
+            console.log("%c📦 Loading micropip package manager...", "color: #ce9178;");
+            await window.pyodide.loadPackage("micropip");
             
-            // Redirect Python stdout/stderr and configure code.InteractiveCompiler
-            pyodide.runPython(`
+            // 2. Initialise the native InteractiveCompiler engine block inside Pyodide
+            window.pyodide.runPython(`
                 import sys
                 import code
-                from js import term
-
-                class TerminalStdout:
-                    def write(self, text):
-                        term.write(text.replace('\\n', '\\r\\n'))
-                    def flush(self):
-                        pass
-
-                sys.stdout = TerminalStdout()
-                sys.stderr = TerminalStdout()
-
-                # Fix: Initialize InteractiveCompiler instead of Compile
-                compiler = code.InteractiveConsole()
+                compiler = code.InteractiveCompiler()
             `);
 
-            term.writeln("\x1b[32mPyodide Python 3 Multi-line Shell Ready!\x1b[0m");
-            term.writeln("Try typing a multi-line loop or function definition.");
-            term.writeln("Press Enter on a blank line to execute a block.\r\n");
-            term.write(activePrompt);
-            setupInputHandling();
-        } catch (err) {
-            term.writeln(`\x1b[31mInitialization failed: ${err.message}\x1b[0m`);
-        }
-    }
+            // 3. Define the evaluation window binding rule for multi-line inputs
+            window.py = async function(strings, ...values) {
+                // Support both tagged template literals (py`code`) and standard strings (py("code"))
+                let code = typeof strings === 'string' ? strings : strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
+                code = code.trim();
 
-    // Process user interactive key bindings
-    function setupInputHandling() {
-        term.onKey(async e => {
-            const key = e.domEvent.key;
-            const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
+                if (!code) return;
 
-            if (key === 'Enter') {
-                term.write('\r\n');
-                await handleLineSubmission();
-            } else if (key === 'Backspace') {
-                if (currentLine.length > 0) {
-                    currentLine = currentLine.slice(0, -1);
-                    term.write('\b \b');
+                try {
+                    // Check if block structure is valid or requires more continuation syntax
+                    window.pyodide.globals.set("test_code_str", code);
+                    const needsMoreInput = window.pyodide.runPython('compiler.compile(test_code_str, "<input>", "single")');
+                    
+                    if (needsMoreInput) {
+                        console.warn("⚠️ Warning: Incomplete block statement (e.g. unclosed loop or def layout). Make sure your block is complete!");
+                    }
+
+                    // Execute asynchronously to maintain top-level 'await' support for micropip
+                    let result = await window.pyodide.runPythonAsync(code);
+                    if (result !== undefined && result !== null) {
+                        console.log(result);
+                    }
+                } catch (err) {
+                    console.error(`❌ Evaluation Error:\n${err.message}`);
                 }
-            } else if (key === 'ArrowUp') {
-                handleHistory(-1);
-            } else if (key === 'ArrowDown') {
-                handleHistory(1);
-            } else if (printable) {
-                currentLine += e.key;
-                term.write(e.key);
-            }
-        });
-    }
+            };
 
-    // Handles history navigation (up/down arrow)
-    function handleHistory(direction) {
-        if (commandHistory.length === 0) return;
-
-        for (let i = 0; i < currentLine.length; i++) {
-            term.write('\b \b');
-        }
-
-        historyIndex += direction;
-        
-        if (historyIndex < 0) {
-            historyIndex = -1;
-            currentLine = "";
-        } else if (historyIndex >= commandHistory.length) {
-            historyIndex = commandHistory.length;
-            currentLine = "";
-        } else {
-            currentLine = commandHistory[commandHistory.length - 1 - historyIndex];
-        }
-
-        term.write(currentLine);
-    }
-
-    // Intercepts single line submits and determines compilation state
-    async function handleLineSubmission() {
-        const trimmedLine = currentLine.trim();
-        linesBuffer.push(currentLine);
-        
-        const testSourceCode = linesBuffer.join('\n');
-        historyIndex = -1;
-
-        let needsMoreInput = false;
-
-        if (testSourceCode.trim().length > 0) {
-            try {
-                pyodide.globals.set("test_code_str", testSourceCode);
-                // runPython checks if code has an incomplete block structure (returns True if it wants more input)
-                needsMoreInput = pyodide.runPython(`
-                    # compiler.compile returns True if more input is required to complete the statement
-                    compiler.compile(test_code_str, "<input>", "single")
-                `);
-            } catch (err) {
-                needsMoreInput = false; // Let syntax errors run through to print the traceback
-            }
-        }
-
-        // If the statement requires indentation or we are in a block and didn't input an empty line
-        if (needsMoreInput || (activePrompt === PROMPT_CONTINUE && currentLine.length > 0)) {
-            activePrompt = PROMPT_CONTINUE;
-            currentLine = "";
-            term.write(activePrompt);
-        } else {
-            const fullCommandBlock = linesBuffer.join('\n');
+            console.log("%c🚀 Pyodide Python 3 Shell Ready inside DevTools!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
+            console.log("Run scripts using JavaScript backticks: %cpy`your_code_here`%c", "color: #9cdcfe; font-weight: bold;", "");
             
-            if (fullCommandBlock.trim()) {
-                commandHistory.push(fullCommandBlock);
-            }
-
-            if (fullCommandBlock.trim().length > 0) {
-                await executePythonCode(fullCommandBlock);
-            } else {
-                term.write(PROMPT_PRIMARY);
-            }
-
-            // Reset local execution buffers
-            linesBuffer = [];
-            currentLine = "";
-            activePrompt = PROMPT_PRIMARY;
+        } catch (error) {
+            console.error("Initialization failed:", error);
         }
     }
 
-    // Asynchronously compile and evaluate accumulated code block strings
-    async function executePythonCode(code) {
-        try {
-            let result = await pyodide.runPythonAsync(code);
-            if (result !== undefined && result !== null) {
-                term.writeln(String(result));
-            }
-        } catch (err) {
-            term.writeln(`\x1b[31mError: ${err.message}\x1b[0m`);
-        }
-        term.write(PROMPT_PRIMARY);
-    }
-
-    initPython();
+    // Run configuration automatically on DOM loading window state
+    initDevToolsPython();
 </script>
 </body>
 </html>
