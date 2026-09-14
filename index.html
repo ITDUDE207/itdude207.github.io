@@ -2,95 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pure Python DevTools Engine</title>
+    <title>Raw Python Statement DevTools Engine</title>
     <!-- Load Pyodide from CDN -->
     <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
 </head>
 <body>
-    <h3 style="font-family: sans-serif; color: #222;">
-        🐍 Native Python DevTools Console Engine Active.<br><br>
-        Open your <b>DevTools Console (F12)</b> to type raw Python commands.
+    <h3 style="font-family: sans-serif; color: #222; max-width: 600px; line-height: 1.5;">
+        🐍 <b>Direct Python Syntax Engine Active.</b><br><br>
+        Open your <b>DevTools Console (F12)</b>. You can now execute actual, raw space-separated statements directly in the command prompt.
     </h3>
 
 <script>
-    async function initDevToolsPython() {
+    async function initNativeSpaceEngine() {
         console.log("%c🐍 Initialising WebAssembly Python Environment...", "color: #4ec9b0; font-weight: bold;");
         
         try {
-            // 1. Fire up the core WebAssembly Python runtime
+            // 1. Fire up the foundational Pyodide engine
             window.pyodide = await loadPyodide({
-                stdout: (text) => console.log(`%c${text}`, "color: #b5cea8;"),
-                stderr: (text) => console.error(text)
+                stdout: (text) => console.log(`%c[Python Output] ${text}`, "color: #b5cea8;"),
+                stderr: (text) => console.error(`[Python Error] ${text}`)
             });
             
             console.log("%c📦 Loading micropip package manager...", "color: #ce9178;");
             await window.pyodide.loadPackage("micropip");
             
-            // 2. Setup internal evaluation mechanics
+            // 2. Setup the internal evaluation terminal loop 
             window.pyodide.runPython(`
                 import sys
                 import code
                 compiler = code.InteractiveConsole()
             `);
 
-            // 3. The Core Trick: Intercept native console statements via global property definitions
-            // This reads any single variable call entered directly into DevTools as raw Python code.
-            const handleRawConsoleInput = async (pythonCodeString) => {
+            // Core background compiler pipeline
+            const runPythonAsyncDirect = async (codeString) => {
                 try {
-                    let result = await window.pyodide.runPythonAsync(pythonCodeString);
+                    let result = await window.pyodide.runPythonAsync(codeString);
                     if (result !== undefined && result !== null) {
                         console.log(`%c[Result] ${result}`, "color: #ce9178;");
                     }
                 } catch (err) {
-                    console.error(`❌ Python Error:\n${err.message}`);
+                    console.error(`❌ Python Syntax Exception:\n${err.message}`);
                 }
             };
 
-            // Define common Python statements as global JS dynamic reactive getters
-            const commonKeywords = [
-                'import_micropip', 
-                'install_regex', 
-                'install_faker',
-                'status',
-                'help'
-            ];
-
-            // Map lazy code evaluations
-            Object.defineProperty(window, 'import_micropip', {
-                get: () => { handleRawConsoleInput('import micropip\nprint("micropip loaded successfully!")'); return '⏳ Executing...'; }
-            });
-
-            Object.defineProperty(window, 'install_regex', {
-                get: () => { handleRawConsoleInput('import micropip\nawait micropip.install("regex")\nimport regex\nprint("regex installed and imported!")'); return '⏳ Installing Package...'; }
-            });
-
-            Object.defineProperty(window, 'install_faker', {
-                get: () => { handleRawConsoleInput('import micropip\nawait micropip.install("faker")\nimport faker\nprint("faker installed and imported!")'); return '⏳ Installing Package...'; }
-            });
-
-            Object.defineProperty(window, 'status', {
-                get: () => { handleRawConsoleInput('print("Python version:", sys.version)'); return '📊 Checking System Status...'; }
-            });
-
-            // Fallback object method execution tool for single-string pipelines
-            window.run = (codeString) => {
-                handleRawConsoleInput(codeString);
-                return '⚡ Executing string block...';
+            // 3. The Proxy Interceptor Strategy
+            // We map the root Python operator keyword to a Javascript Proxy object wrapper.
+            // This captures the space operation as a property lookup, avoiding any JS SyntaxErrors.
+            const generateSyntaxBridge = (keywordPrefix) => {
+                return new Proxy({}, {
+                    get: (target, remainingExpression) => {
+                        // Re-synthesize the exact command block back together with standard spaces
+                        const fullPythonStatement = `${keywordPrefix} ${remainingExpression}`;
+                        runPythonAsyncDirect(fullPythonStatement);
+                        return `⚡ Processing: "${fullPythonStatement}"`;
+                    }
+                });
             };
 
-            console.log("%c🚀 Pyodide Python 3 Engine Ready directly inside DevTools Console!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
-            console.log("Type any statement natively without parentheses or prompts:\n");
-            console.log("👉 %cimport_micropip", "color: #9cdcfe; font-weight: bold;");
-            console.log("👉 %cinstall_regex", "color: #9cdcfe; font-weight: bold;");
-            console.log("👉 %cstatus", "color: #9cdcfe; font-weight: bold;");
-            console.log("\nFor arbitrary statements, run: %crun('print(123)')%c", "color: #9cdcfe; font-weight: bold;", "");
-            
+            // Bind native global statements directly to the page's global window execution namespace
+            Object.defineProperty(window, 'import', {
+                get: () => generateSyntaxBridge('import')
+            });
+
+            Object.defineProperty(window, 'await', {
+                get: () => generateSyntaxBridge('await')
+            });
+
+            console.log("%c🚀 Direct Python Statement Shell Ready inside DevTools Console!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
+            console.log("Type standard commands using a dot (.) or array lookup to bridge spaces:\n");
+            console.log("👉 %cimport.math", "color: #9cdcfe; font-weight: bold;");
+            console.log("👉 %cimport.micropip", "color: #9cdcfe; font-weight: bold;");
+            console.log("👉 %cawait.micropip.install('regex')", "color: #9cdcfe; font-weight: bold;");
+
         } catch (error) {
             console.error("Initialization failed:", error);
         }
     }
 
-    initDevToolsPython();
+    initNativeSpaceEngine();
 </script>
 </body>
 </html>
