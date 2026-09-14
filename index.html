@@ -29,7 +29,7 @@
             window.pyodide.runPython(`
                 import sys
                 import code
-                compiler = code.InteractiveCompiler()
+                compiler = code.InteractiveConsole()
             `);
 
             // 3. Define the evaluation window binding rule for multi-line inputs
