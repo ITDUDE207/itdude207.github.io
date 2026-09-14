@@ -57,7 +57,7 @@ https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
             term.writeln("Loading micropip package manager...");
             await pyodide.loadPackage("micropip");
             
-            // Redirect Python stdout/stderr and load code compiler helpers
+            // Redirect Python stdout/stderr and configure code.InteractiveCompiler
             pyodide.runPython(`
                 import sys
                 import code
@@ -72,8 +72,8 @@ https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
                 sys.stdout = TerminalStdout()
                 sys.stderr = TerminalStdout()
 
-                # Compiler engine instance to inspect partial code lines
-                compiler = code.Compile()
+                # Fix: Initialize InteractiveCompiler instead of Compile
+                compiler = code.InteractiveCompiler()
             `);
 
             term.writeln("\x1b[32mPyodide Python 3 Multi-line Shell Ready!\x1b[0m");
@@ -96,7 +96,6 @@ https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
                 term.write('\r\n');
                 await handleLineSubmission();
             } else if (key === 'Backspace') {
-                // Prevent deleting past the current prompt symbols
                 if (currentLine.length > 0) {
                     currentLine = currentLine.slice(0, -1);
                     term.write('\b \b');
@@ -116,14 +115,12 @@ https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
     function handleHistory(direction) {
         if (commandHistory.length === 0) return;
 
-        // Clear current active line text visually
         for (let i = 0; i < currentLine.length; i++) {
             term.write('\b \b');
         }
 
         historyIndex += direction;
         
-        // Bounds checking
         if (historyIndex < 0) {
             historyIndex = -1;
             currentLine = "";
@@ -137,53 +134,41 @@ https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
         term.write(currentLine);
     }
 
-    // Intercepts single line submits and determines code compilation state
+    // Intercepts single line submits and determines compilation state
     async function handleLineSubmission() {
         const trimmedLine = currentLine.trim();
         linesBuffer.push(currentLine);
         
-        // Build current state compound string
         const testSourceCode = linesBuffer.join('\n');
-
-        // Reset history pointer back to idle
         historyIndex = -1;
 
-        // Global state variable checking if python needs more context parsing strings
-        let dynamicStatus = "single"; 
+        let needsMoreInput = false;
 
         if (testSourceCode.trim().length > 0) {
             try {
-                // Safely evaluate python code snippet compilation state via Pyodide globals
                 pyodide.globals.set("test_code_str", testSourceCode);
-                dynamicStatus = pyodide.runPython(`
-                    try:
-                        # Try to compile code block
-                        res = compiler(test_code_str, "<input>", "single")
-                        # Returns None if code block statement incomplete (e.g. requires indentation)
-                        "single" if res is not None else "incomplete"
-                    except (OverflowError, SyntaxError, ValueError):
-                        "invalid"
+                // runPython checks if code has an incomplete block structure (returns True if it wants more input)
+                needsMoreInput = pyodide.runPython(`
+                    # compiler.compile returns True if more input is required to complete the statement
+                    compiler.compile(test_code_str, "<input>", "single")
                 `);
             } catch (err) {
-                dynamicStatus = "invalid";
+                needsMoreInput = false; // Let syntax errors run through to print the traceback
             }
         }
 
-        // Processing rules matching native python compilation engine states
-        if (dynamicStatus === "incomplete" || (activePrompt === PROMPT_CONTINUE && trimmedLine.length > 0)) {
-            // Keep block open, switch to continuation prompt
+        // If the statement requires indentation or we are in a block and didn't input an empty line
+        if (needsMoreInput || (activePrompt === PROMPT_CONTINUE && currentLine.length > 0)) {
             activePrompt = PROMPT_CONTINUE;
             currentLine = "";
             term.write(activePrompt);
         } else {
-            // Block is complete or syntax is invalid. Save history and run code
             const fullCommandBlock = linesBuffer.join('\n');
             
             if (fullCommandBlock.trim()) {
                 commandHistory.push(fullCommandBlock);
             }
 
-            // Execute the code buffer
             if (fullCommandBlock.trim().length > 0) {
                 await executePythonCode(fullCommandBlock);
             } else {
