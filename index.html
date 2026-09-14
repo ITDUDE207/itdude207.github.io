@@ -3,142 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>In-Browser Python Shell with Micropip</title>
-    <!-- Load Pyodide from CDN -->
+    <title>In-Browser Python Async REPL</title>
+    <!-- Xterm.js Styles and Scripts -->
+    <link rel="stylesheet" href="https://jsdelivr.net" />
+    <script src="https://jsdelivr.net"></script>
+    <!-- Pyodide Core -->
     <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
     <style>
-        body {
-            font-family: 'Courier New', Courier, monospace;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            margin: 20px;
-        }
-        h2 { color: #4ec9b0; }
-        #status {
-            color: #ce9178;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        #console-log {
-            background-color: #252526;
-            border: 1px solid #3c3c3c;
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            white-space: pre-wrap;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .input-area {
-            display: flex;
-            gap: 10px;
-        }
-        textarea {
-            flex-grow: 1;
-            background-color: #2d2d2d;
-            border: 1px solid #3c3c3c;
-            color: #9cdcfe;
-            font-family: inherit;
-            padding: 10px;
-            resize: vertical;
-            height: 60px;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #0e639c;
-            color: white;
-            border: none;
-            padding: 0 20px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-        }
-        button:hover:not(:disabled) {
-            background-color: #1177bb;
-        }
+        body { background-color: #1a1a1a; margin: 0; padding: 20px; font-family: monospace; }
+        #terminal-container { width: 100%; height: 85vh; background: #000; padding: 10px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <h2>🐍 Pyodide Browser Shell</h2>
-    <div id="status">Status: Initializing WebAssembly environment...</div>
-
-    <div id="console-log">Welcome! Please wait for Pyodide to load before running code.</div>
-
-    <div class="input-area">
-        <textarea id="code-input" placeholder="Type Python code here... (Try: import micropip; await micropip.install('regex'))" disabled></textarea>
-        <button id="run-btn" onclick="runPython()" disabled>Run</button>
-    </div>
+    <div id="terminal-container"></div>
 
 <script>
     let pyodide;
-    const statusDiv = document.getElementById('status');
-    const logDiv = document.getElementById('console-log');
-    const codeInput = document.getElementById('code-input');
-    const runBtn = document.getElementById('run-btn');
+    let term;
+    let currentLine = "";
+    const prompt = ">>> ";
 
-    // Custom print redirect to capture standard output from Python
-    function printToConsole(text) {
-        logDiv.innerText += '\n' + text;
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
+    // Initialize the Terminal UI
+    term = new Terminal({
+        cursorBlink: true,
+        fontFamily: 'Courier New, Courier, monospace',
+        fontSize: 14,
+        theme: { background: '#1e1e1e', foreground: '#f8f8f2', cursor: '#f8f8f0' }
+    });
+    term.open(document.getElementById('terminal-container'));
+    term.writeln("Initializing WebAssembly environment. Please wait...");
 
-    // 1. Initialise Pyodide and Micropip
-    async function initPyodide() {
+    // Initialize Pyodide & Micropip
+    async function initPython() {
         try {
-            // Load main runtime
             pyodide = await loadPyodide({
-                stdout: printToConsole,
-                stderr: printToConsole
+                stdout: (text) => term.writeln(text),
+                stderr: (text) => term.writeln(`\x1b[31m${text}\x1b[0m`) // Red color for errors
             });
             
-            statusDiv.innerText = "Status: Loading package manager (micropip)...";
-            // Pre-load micropip into the environment
-            await pyodide.loadPackage("micropip"); 
+            term.writeln("Loading micropip package manager...");
+            await pyodide.loadPackage("micropip");
             
-            statusDiv.innerText = "Status: Ready";
-            statusDiv.style.color = "#4ec9b0";
-            codeInput.disabled = false;
-            runBtn.disabled = false;
-            logDiv.innerText += "\nPyodide and micropip loaded. You can now execute async tasks!";
+            // Expose a helper to Python so it can print without adding extra newlines
+            pyodide.runPython(`
+                import sys
+                from js import term
+                class TerminalStdout:
+                    def write(self, text):
+                        # Convert newline characters to proper terminal return carriages
+                        term.write(text.replace('\\n', '\\r\\n'))
+                    def flush(self):
+                        pass
+                sys.stdout = TerminalStdout()
+                sys.stderr = TerminalStdout()
+            `);
+
+            term.writeln("\x1b[32mPyodide Python 3 Shell Ready!\x1b[0m");
+            term.writeln("Try running: import micropip; await micropip.install('regex')\r\n");
+            term.write(prompt);
+            setupInputHandling();
         } catch (err) {
-            statusDiv.innerText = "Status: Initialization Failed";
-            statusDiv.style.color = "#f44747";
-            logDiv.innerText += `\nError during startup: ${err.message}`;
+            term.writeln(`\x1b[31mInitialization failed: ${err.message}\x1b[0m`);
         }
     }
 
-    // 2. Execute code asynchronously
-    async function runPython() {
-        const code = codeInput.value.trim();
-        if (!code) return;
+    // Process user interactive key bindings
+    function setupInputHandling() {
+        term.onKey(async e => {
+            const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
 
-        printToConsole(`>>> ${code}`);
-        runBtn.disabled = true;
-        statusDiv.innerText = "Status: Executing...";
-
-        try {
-            // runPythonAsync allows top-level 'await' expressions needed for micropip
-            let result = await pyodide.runPythonAsync(code);
-            
-            if (result !== undefined) {
-                printToConsole(result);
+            if (e.domEvent.key === 'Enter') {
+                term.write('\r\n');
+                if (currentLine.trim()) {
+                    await executePythonCode(currentLine);
+                } else {
+                    term.write(prompt);
+                }
+                currentLine = "";
+            } else if (e.domEvent.key === 'Backspace') {
+                // Prevent deleting the prompt symbol
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.slice(0, -1);
+                    term.write('\b \b');
+                }
+            } else if (printable) {
+                currentLine += e.key;
+                term.write(e.key);
             }
-            statusDiv.innerText = "Status: Ready";
-        } catch (err) {
-            printToConsole(`Error: ${err.message}`);
-            statusDiv.innerText = "Status: Execution Error";
-        } finally {
-            runBtn.disabled = false;
-        }
+        });
     }
 
-    // Start everything on page load
-    initPyodide();
+    // Asynchronously compile and evaluate raw strings
+    async function executePythonCode(code) {
+        try {
+            // runPythonAsync acts directly as an async execution runtime loop supporting top-level await 
+            let result = await pyodide.runPythonAsync(code);
+            if (result !== undefined && result !== null) {
+                term.writeln(String(result));
+            }
+        } catch (err) {
+            term.writeln(`\x1b[31mError: ${err.message}\x1b[0m`);
+        }
+        term.write(prompt);
+    }
+
+    initPython();
 </script>
 </body>
 </html>
