@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -29,9 +28,13 @@
 
     <link rel="manifest" href="./manifest.json">
 
-    <!-- Brython -->
-    <script src="./brython.js"></script>
-    <script src="./brython_stdlib.js"></script>
+    <!--
+        Pyodide CDN.
+
+        The service worker caches this and the files
+        Pyodide requests, allowing later offline use.
+    -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
 
 
     <style>
@@ -69,9 +72,9 @@
         }
 
 
-        /* ================================
+        /* ============================
            TOOLBAR
-           ================================ */
+           ============================ */
 
         .toolbar {
             flex-shrink: 0;
@@ -111,7 +114,7 @@
         }
 
         #run-button {
-            background: #4caf50;
+            background: #4CAF50;
         }
 
         #clear-button {
@@ -120,6 +123,10 @@
 
         #restart-button {
             background: #795548;
+        }
+
+        #packages-button {
+            background: #1976D2;
         }
 
         #status {
@@ -133,9 +140,9 @@
         }
 
 
-        /* ================================
+        /* ============================
            EDITOR
-           ================================ */
+           ============================ */
 
         .editor-title,
         .terminal-title {
@@ -195,16 +202,16 @@
         }
 
 
-        /* ================================
+        /* ============================
            TERMINAL
-           ================================ */
+           ============================ */
 
         #terminal {
             flex-shrink: 0;
 
-            height: 35%;
+            height: 38%;
 
-            min-height: 150px;
+            min-height: 170px;
 
             display: flex;
 
@@ -235,6 +242,8 @@
             overflow-y: auto;
 
             overflow-wrap: break-word;
+
+            -webkit-overflow-scrolling: touch;
         }
 
         #terminal-input-row {
@@ -254,8 +263,6 @@
 
             color: #00ff00;
 
-            font-family: monospace;
-
             font-weight: bold;
         }
 
@@ -271,7 +278,7 @@
 
             background: transparent;
 
-            color: #fff;
+            color: white;
 
             font-family: monospace;
 
@@ -287,7 +294,80 @@
         }
 
         .command {
-            color: #fff;
+            color: white;
+        }
+
+        .success {
+            color: #69f0ae;
+        }
+
+
+        /* ============================
+           PACKAGE PANEL
+           ============================ */
+
+        #package-panel {
+            display: none;
+
+            position: fixed;
+
+            left: 50%;
+            top: 50%;
+
+            transform: translate(-50%, -50%);
+
+            width: min(500px, 92vw);
+            max-height: 80vh;
+
+            padding: 20px;
+
+            background: #252526;
+
+            border: 1px solid #555;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 20px 60px
+                rgba(0, 0, 0, 0.6);
+
+            z-index: 1000;
+
+            overflow-y: auto;
+        }
+
+        #package-panel h2 {
+            margin-top: 0;
+        }
+
+        #package-input {
+            width: 100%;
+
+            padding: 10px;
+
+            background: #151515;
+
+            color: white;
+
+            border: 1px solid #555;
+
+            border-radius: 6px;
+
+            font-size: 16px;
+        }
+
+        #installed-packages {
+            margin-top: 15px;
+
+            color: #aaa;
+
+            white-space: pre-wrap;
+        }
+
+        .close-button {
+            background: #555;
+
+            float: right;
         }
 
 
@@ -303,8 +383,9 @@
             }
 
             #terminal {
-                height: 38%;
+                height: 40%;
             }
+
         }
 
     </style>
@@ -315,15 +396,15 @@
 <body>
 
 
-    <!-- ================================
+    <!-- ============================
          TOOLBAR
-         ================================ -->
+         ============================ -->
 
     <div class="toolbar">
 
         <button
             id="run-button"
-            onclick="runEditorCode()"
+            onclick="runEditor()"
         >
             ▶ Run
         </button>
@@ -342,16 +423,23 @@
             ↻ Restart
         </button>
 
+        <button
+            id="packages-button"
+            onclick="showPackages()"
+        >
+            📦 Packages
+        </button>
+
         <div id="status">
-            Starting Python...
+            Loading Python...
         </div>
 
     </div>
 
 
-    <!-- ================================
+    <!-- ============================
          EDITOR
-         ================================ -->
+         ============================ -->
 
     <div class="editor-title">
         Editor — main.py
@@ -365,7 +453,7 @@
         autocapitalize="off"
         autocomplete="off"
         placeholder="Write Python here..."
->print("Hello from ThonnyPad!")
+>print("Hello from Pyodide!")
 
 name = "Alice"
 
@@ -375,12 +463,12 @@ for i in range(5):
     print("Step", i)</textarea>
 
 
-    <!-- ================================
+    <!-- ============================
          TERMINAL
-         ================================ -->
+         ============================ -->
 
     <div class="terminal-title">
-        Shell
+        Python Shell
     </div>
 
 
@@ -390,7 +478,9 @@ for i in range(5):
 
         <div id="terminal-input-row">
 
-            <span id="prompt">&gt;&gt;&gt;</span>
+            <span id="prompt">
+                &gt;&gt;&gt;&nbsp;
+            </span>
 
             <input
                 id="terminal-input"
@@ -399,7 +489,7 @@ for i in range(5):
                 autocorrect="off"
                 autocapitalize="off"
                 spellcheck="false"
-                placeholder="Type a Python command..."
+                placeholder="Python command..."
             >
 
         </div>
@@ -407,121 +497,312 @@ for i in range(5):
     </div>
 
 
-    <!-- ================================
-         JAVASCRIPT
-         ================================ -->
+    <!-- ============================
+         PACKAGE WINDOW
+         ============================ -->
+
+    <div id="package-panel">
+
+        <button
+            class="close-button"
+            onclick="hidePackages()"
+        >
+            Close
+        </button>
+
+        <h2>📦 Packages</h2>
+
+        <p>
+            Install a package while online.
+            Its downloaded files will be cached
+            by the service worker.
+        </p>
+
+        <br>
+
+        <input
+            id="package-input"
+            placeholder="requests"
+            autocomplete="off"
+        >
+
+        <br><br>
+
+        <button
+            onclick="installPackageFromPanel()"
+            style="background:#1976D2"
+        >
+            Install
+        </button>
+
+        <div id="installed-packages">
+        </div>
+
+    </div>
+
 
     <script>
 
-        const codeEditor =
-            document.getElementById("code");
+        let pyodide = null;
 
-        const terminalOutput =
-            document.getElementById("terminal-output");
+        let pyodideReady = false;
 
-        const terminalInput =
-            document.getElementById("terminal-input");
+        const history = [];
+
+        let historyIndex = 0;
+
+
+        const output =
+            document.getElementById(
+                "terminal-output"
+            );
+
+        const input =
+            document.getElementById(
+                "terminal-input"
+            );
+
+        const code =
+            document.getElementById(
+                "code"
+            );
 
         const status =
-            document.getElementById("status");
+            document.getElementById(
+                "status"
+            );
 
 
-        /* =================================
-           TERMINAL OUTPUT
-           ================================= */
+        /* ============================
+           OUTPUT
+           ============================ */
 
-        function terminalWrite(
+        function write(
             text,
             className = ""
         ) {
 
             const span =
-                document.createElement("span");
+                document.createElement(
+                    "span"
+                );
 
-            span.textContent = text;
+            span.textContent =
+                text;
 
             if (className) {
-                span.className = className;
+                span.className =
+                    className;
             }
 
-            terminalOutput.appendChild(span);
+            output.appendChild(span);
 
-            terminalOutput.scrollTop =
-                terminalOutput.scrollHeight;
+            output.scrollTop =
+                output.scrollHeight;
         }
 
 
         function clearTerminal() {
-
-            terminalOutput.textContent = "";
-
+            output.textContent = "";
         }
 
 
         function setStatus(text) {
-
             status.textContent = text;
+        }
+
+
+        /* ============================
+           SERVICE WORKER
+           ============================ */
+
+        if ("serviceWorker" in navigator) {
+
+            navigator.serviceWorker
+                .register("./sw.js")
+                .then(function(registration) {
+
+                    console.log(
+                        "Offline cache enabled",
+                        registration
+                    );
+
+                })
+                .catch(function(error) {
+
+                    console.error(
+                        "Service worker error:",
+                        error
+                    );
+
+                    write(
+                        "Warning: offline cache could not start.\n",
+                        "error"
+                    );
+
+                });
 
         }
 
 
-        /* =================================
-           STARTUP
-           ================================= */
+        /* ============================
+           PYODIDE START
+           ============================ */
 
-        window.addEventListener(
-            "load",
-            function() {
+        async function initializePython() {
 
-                if (
-                    typeof brython === "function"
-                ) {
+            try {
 
-                    brython();
+                write(
+                    "Loading Pyodide...\n",
+                    "system"
+                );
 
-                    setStatus(
-                        "Python ready"
-                    );
+                setStatus(
+                    "Loading Python..."
+                );
 
-                    terminalWrite(
-                        "ThonnyPad Python Shell\n",
-                        "system"
-                    );
 
-                    terminalWrite(
-                        "Type Python commands below.\n\n",
-                        "system"
-                    );
+                /*
+                 * IMPORTANT:
+                 *
+                 * indexURL points to the same
+                 * CDN directory as pyodide.js.
+                 *
+                 * The service worker caches
+                 * requests to this CDN.
+                 */
 
-                }
-                else {
+                pyodide =
+                    await loadPyodide({
+                        indexURL:
+                            "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/"
+                    });
 
-                    setStatus(
-                        "Brython failed"
-                    );
 
-                    terminalWrite(
-                        "ERROR: brython.js could not be loaded.\n",
-                        "error"
-                    );
-                }
+                /*
+                 * Load micropip.
+                 */
+
+                await pyodide.loadPackage(
+                    "micropip"
+                );
+
+
+                /*
+                 * Redirect stdout.
+                 */
+
+                pyodide.setStdout({
+                    batched: function(text) {
+
+                        write(text);
+
+                    }
+                });
+
+
+                /*
+                 * Redirect stderr.
+                 */
+
+                pyodide.setStderr({
+                    batched: function(text) {
+
+                        write(
+                            text,
+                            "error"
+                        );
+
+                    }
+                });
+
+
+                pyodideReady = true;
+
+
+                setStatus(
+                    "Python ready"
+                );
+
+
+                write(
+                    "Python environment ready.\n",
+                    "success"
+                );
+
+
+                write(
+                    "Type help() for Python help.\n\n",
+                    "system"
+                );
+
+
+                /*
+                 * Reinstall packages that the user
+                 * previously installed.
+                 *
+                 * The actual wheel/package files
+                 * may already be in the service
+                 * worker cache.
+                 */
+
+                await restorePackages();
+
+
+                input.focus();
 
             }
-        );
+            catch (error) {
+
+                console.error(error);
+
+                setStatus(
+                    "Python failed"
+                );
+
+                write(
+                    "\nCould not start Pyodide:\n" +
+                    error +
+                    "\n\n" +
+                    "Make sure you first open this app " +
+                    "while online so the CDN files can " +
+                    "be cached.\n",
+                    "error"
+                );
+
+            }
+
+        }
 
 
-        /* =================================
+        initializePython();
+
+
+        /* ============================
            RUN EDITOR
-           ================================= */
+           ============================ */
 
-        function runEditorCode() {
+        async function runEditor() {
 
-            const code =
-                codeEditor.value;
+            if (!pyodideReady) {
 
-            if (!code.trim()) {
+                write(
+                    "Python is still loading...\n",
+                    "error"
+                );
 
-                terminalWrite(
+                return;
+            }
+
+
+            const source =
+                code.value;
+
+
+            if (!source.trim()) {
+
+                write(
                     "[Nothing to run]\n",
                     "error"
                 );
@@ -530,118 +811,51 @@ for i in range(5):
             }
 
 
-            setStatus("Running...");
+            setStatus(
+                "Running..."
+            );
 
 
-            terminalWrite(
+            write(
                 "\n>>> Running main.py\n",
                 "system"
             );
 
 
-            const encoded =
-                btoa(
-                    unescape(
-                        encodeURIComponent(code)
-                    )
+            try {
+
+                await pyodide.runPythonAsync(
+                    source
                 );
 
 
-            const script =
-                document.createElement("script");
+                setStatus(
+                    "Python ready"
+                );
 
+            }
+            catch (error) {
 
-            script.type =
-                "text/python";
+                write(
+                    error.toString() +
+                    "\n",
+                    "error"
+                );
 
+                setStatus(
+                    "Error"
+                );
 
-            script.textContent = `
-
-from browser import document
-import sys
-import base64
-import traceback
-
-
-class TerminalOutput:
-
-    def write(self, text):
-
-        document[
-            "terminal-output"
-        ].textContent += text
-
-        document[
-            "terminal-output"
-        ].scrollTop = (
-            document[
-                "terminal-output"
-            ].scrollHeight
-        )
-
-    def flush(self):
-        pass
-
-
-sys.stdout = TerminalOutput()
-sys.stderr = TerminalOutput()
-
-
-try:
-
-    source = base64.b64decode(
-        "${encoded}"
-    ).decode("utf-8")
-
-    exec(
-        compile(
-            source,
-            "main.py",
-            "exec"
-        ),
-        {
-            "__name__": "__main__"
-        }
-    )
-
-except Exception:
-
-    traceback.print_exc()
-
-`;
-
-
-            document.body.appendChild(script);
-
-
-            setTimeout(
-                function() {
-
-                    script.remove();
-
-                    setStatus("Finished");
-
-                },
-                100
-            );
+            }
 
         }
 
 
-        /* =================================
-           TERMINAL HISTORY
-           ================================= */
-
-        const history = [];
-
-        let historyIndex = -1;
-
-
-        /* =================================
+        /* ============================
            TERMINAL COMMAND
-           ================================= */
+           ============================ */
 
-        function executeTerminalCommand(
+        async function executeCommand(
             command
         ) {
 
@@ -660,15 +874,26 @@ except Exception:
                 history.length;
 
 
-            terminalWrite(
-                ">>> " + command + "\n",
+            write(
+                ">>> " +
+                command +
+                "\n",
                 "command"
             );
 
 
-            /* -------------------------------
-               CLEAR
-               ------------------------------- */
+            if (!pyodideReady) {
+
+                write(
+                    "Python is not ready yet.\n",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            /* CLEAR */
 
             if (
                 command === "clear"
@@ -680,64 +905,50 @@ except Exception:
             }
 
 
-            /* -------------------------------
-               HELP
-               ------------------------------- */
+            /* HELP */
 
             if (
                 command === "help"
             ) {
 
-                terminalWrite(
-                    "Commands:\n" +
+                write(
+                    "ThonnyPad commands:\n\n" +
                     "  clear\n" +
                     "  help\n" +
                     "  restart\n" +
-                    "  pip install PACKAGE\n\n"
+                    "  pip install PACKAGE\n\n" +
+
+                    "Examples:\n\n" +
+
+                    "  pip install requests\n" +
+                    "  pip install beautifulsoup4\n" +
+                    "  pip install requests==2.32.3\n\n"
                 );
 
                 return;
             }
 
 
-            /* -------------------------------
-               RESTART
-               ------------------------------- */
+            /* RESTART */
 
             if (
                 command === "restart"
             ) {
 
-                restartPython();
+                await restartPython();
 
                 return;
             }
 
 
-            /* -------------------------------
-               PIP INSTALL
-               ------------------------------- */
-
-            /*
-             * This is the important part.
-             *
-             * If the user types:
-             *
-             * pip install requests
-             *
-             * we DO NOT run normal pip.
-             *
-             * Instead we call:
-             *
-             * micropip.install("requests")
-             */
+            /* PIP */
 
             if (
                 command === "pip" ||
                 command.startsWith("pip ")
             ) {
 
-                handlePipCommand(
+                await handlePip(
                     command
                 );
 
@@ -745,22 +956,47 @@ except Exception:
             }
 
 
-            /* -------------------------------
-               NORMAL PYTHON
-               ------------------------------- */
+            /* NORMAL PYTHON */
 
-            runTerminalPython(
-                command
-            );
+            try {
+
+                const result =
+                    await pyodide.runPythonAsync(
+                        command
+                    );
+
+
+                if (
+                    result !== undefined &&
+                    result !== null
+                ) {
+
+                    write(
+                        String(result) +
+                        "\n"
+                    );
+
+                }
+
+            }
+            catch (error) {
+
+                write(
+                    error.toString() +
+                    "\n",
+                    "error"
+                );
+
+            }
 
         }
 
 
-        /* =================================
-           PIP COMMAND HANDLER
-           ================================= */
+        /* ============================
+           PIP HANDLER
+           ============================ */
 
-        function handlePipCommand(
+        async function handlePip(
             command
         ) {
 
@@ -774,7 +1010,7 @@ except Exception:
                 parts[1] !== "install"
             ) {
 
-                terminalWrite(
+                write(
                     "Usage: pip install PACKAGE\n",
                     "error"
                 );
@@ -783,34 +1019,25 @@ except Exception:
             }
 
 
-            /*
-             * Everything after "pip install"
-             * is treated as a package specification.
-             *
-             * Examples:
-             *
-             * requests
-             * requests==2.32.5
-             * requests>=2
-             */
-
-            const packageSpec =
-                parts
-                    .slice(2)
-                    .join(" ");
+            const packages =
+                parts.slice(2);
 
 
             /*
-             * Don't pass arbitrary shell flags to
-             * micropip.
+             * We currently support package
+             * specifications, not pip options.
              */
 
             if (
-                packageSpec.startsWith("-")
+                packages.some(
+                    function(pkg) {
+                        return pkg.startsWith("-");
+                    }
+                )
             ) {
 
-                terminalWrite(
-                    "pip options are not supported.\n" +
+                write(
+                    "pip options are not supported yet.\n" +
                     "Use: pip install PACKAGE\n",
                     "error"
                 );
@@ -819,19 +1046,19 @@ except Exception:
             }
 
 
-            installWithMicropip(
-                packageSpec
+            await installPackages(
+                packages
             );
 
         }
 
 
-        /* =================================
-           MICROPIP INSTALLATION
-           ================================= */
+        /* ============================
+           MICROPIP INSTALL
+           ============================ */
 
-        function installWithMicropip(
-            packageSpec
+        async function installPackages(
+            packages
         ) {
 
             setStatus(
@@ -839,240 +1066,262 @@ except Exception:
             );
 
 
-            terminalWrite(
-                "Using micropip to install " +
-                packageSpec +
-                "...\n",
+            write(
+                "Using micropip...\n",
                 "system"
             );
 
 
-            /*
-             * Convert the package specification
-             * into a safely quoted Python string.
-             */
+            try {
 
-            const safePackage =
-                packageSpec
-                    .replace(
-                        /\\/g,
-                        "\\\\"
-                    )
-                    .replace(
-                        /"/g,
-                        '\\"'
-                    );
+                /*
+                 * Store package list in Python.
+                 */
 
-
-            const script =
-                document.createElement(
-                    "script"
+                pyodide.globals.set(
+                    "_thonny_packages",
+                    packages
                 );
 
 
-            script.type =
-                "text/python";
-
-
-            script.textContent = `
+                await pyodide.runPythonAsync(`
 
 import micropip
-import traceback
-from browser import document
+
+await micropip.install(
+    _thonny_packages
+)
+
+`);
 
 
-async def install_package():
+                /*
+                 * Remember packages in localStorage.
+                 */
 
-    package_name = "${safePackage}"
-
-    try:
-
-        await micropip.install(
-            package_name
-        )
-
-        document[
-            "terminal-output"
-        ].textContent += (
-            "Successfully installed " +
-            package_name +
-            "\\n"
-        )
-
-        document[
-            "terminal-output"
-        ].scrollTop = (
-            document[
-                "terminal-output"
-            ].scrollHeight
-        )
-
-    except Exception:
-
-        document[
-            "terminal-output"
-        ].textContent += (
-            "ERROR installing " +
-            package_name +
-            ":\\n"
-        )
-
-        document[
-            "terminal-output"
-        ].textContent += (
-            traceback.format_exc()
-        )
-
-
-install_package()
-
-`;
-
-
-            document.body.appendChild(
-                script
-            );
-
-
-            /*
-             * Give Brython time to process
-             * the generated Python script.
-             */
-
-            setTimeout(
-                function() {
-
-                    script.remove();
-
-                    setStatus(
-                        "Python ready"
+                const oldPackages =
+                    JSON.parse(
+                        localStorage.getItem(
+                            "thonny_packages"
+                        ) || "[]"
                     );
 
-                },
-                1000
-            );
 
-        }
+                for (
+                    const pkg of packages
+                ) {
+
+                    /*
+                     * Remove simple version
+                     * formatting when checking
+                     * whether it is already listed.
+                     */
+
+                    if (
+                        !oldPackages.includes(pkg)
+                    ) {
+
+                        oldPackages.push(pkg);
+
+                    }
+
+                }
 
 
-        /* =================================
-           NORMAL TERMINAL PYTHON
-           ================================= */
-
-        function runTerminalPython(
-            command
-        ) {
-
-            const encoded =
-                btoa(
-                    unescape(
-                        encodeURIComponent(
-                            command
-                        )
+                localStorage.setItem(
+                    "thonny_packages",
+                    JSON.stringify(
+                        oldPackages
                     )
                 );
 
 
-            const script =
-                document.createElement(
-                    "script"
+                write(
+                    "Successfully installed: " +
+                    packages.join(", ") +
+                    "\n",
+                    "success"
                 );
 
 
-            script.type =
-                "text/python";
+                write(
+                    "Package files are now available " +
+                    "from the browser cache when cached " +
+                    "by the service worker.\n",
+                    "system"
+                );
 
 
-            script.textContent = `
-
-from browser import document
-import sys
-import traceback
-import base64
+                setStatus(
+                    "Python ready"
+                );
 
 
-class Output:
+                updatePackageList();
 
-    def write(self, text):
-
-        document[
-            "terminal-output"
-        ].textContent += text
-
-        document[
-            "terminal-output"
-        ].scrollTop = (
-            document[
-                "terminal-output"
-            ].scrollHeight
-        )
-
-    def flush(self):
-        pass
-
-
-sys.stdout = Output()
-sys.stderr = Output()
-
-
-try:
-
-    source = base64.b64decode(
-        "${encoded}"
-    ).decode("utf-8")
-
-    try:
-
-        result = eval(
-            source,
-            {
-                "__name__": "__main__"
             }
-        )
+            catch (error) {
 
-        if result is not None:
-            print(repr(result))
+                write(
+                    "\nInstallation failed:\n" +
+                    error +
+                    "\n",
+                    "error"
+                );
 
-    except SyntaxError:
 
-        exec(
-            compile(
-                source,
-                "<console>",
-                "exec"
-            ),
-            {
-                "__name__": "__main__"
+                setStatus(
+                    "Installation failed"
+                );
+
             }
-        )
-
-except Exception:
-
-    traceback.print_exc()
-
-`;
-
-
-            document.body.appendChild(
-                script
-            );
-
-
-            setTimeout(
-                () => script.remove(),
-                100
-            );
 
         }
 
 
-        /* =================================
-           TERMINAL KEYBOARD
-           ================================= */
+        /* ============================
+           RESTORE PACKAGES
+           ============================ */
 
-        terminalInput.addEventListener(
+        async function restorePackages() {
+
+            const saved =
+                JSON.parse(
+                    localStorage.getItem(
+                        "thonny_packages"
+                    ) || "[]"
+                );
+
+
+            if (
+                saved.length === 0
+            ) {
+                return;
+            }
+
+
+            write(
+                "Restoring installed packages...\n",
+                "system"
+            );
+
+
+            try {
+
+                pyodide.globals.set(
+                    "_thonny_restore",
+                    saved
+                );
+
+
+                await pyodide.runPythonAsync(`
+
+import micropip
+
+await micropip.install(
+    _thonny_restore
+)
+
+`);
+
+
+                write(
+                    "Installed packages restored.\n",
+                    "success"
+                );
+
+            }
+            catch (error) {
+
+                /*
+                 * This can happen if the user
+                 * is offline and a package wasn't
+                 * previously cached.
+                 */
+
+                write(
+                    "Some packages could not be restored " +
+                    "offline. Connect to the internet " +
+                    "once to download them again.\n",
+                    "error"
+                );
+
+            }
+
+        }
+
+
+        /* ============================
+           RESTART
+           ============================ */
+
+        async function restartPython() {
+
+            write(
+                "\nRestarting Python...\n",
+                "system"
+            );
+
+
+            pyodideReady =
+                false;
+
+
+            setStatus(
+                "Restarting..."
+            );
+
+
+            try {
+
+                /*
+                 * Reset Python globals.
+                 */
+
+                await pyodide.runPythonAsync(`
+
+globals().clear()
+
+import sys
+
+`);
+
+                pyodideReady =
+                    true;
+
+
+                write(
+                    "Python restarted.\n",
+                    "success"
+                );
+
+
+                setStatus(
+                    "Python ready"
+                );
+
+            }
+            catch (error) {
+
+                write(
+                    "Restart failed: " +
+                    error +
+                    "\n",
+                    "error"
+                );
+
+            }
+
+        }
+
+
+        /* ============================
+           TERMINAL INPUT
+           ============================ */
+
+        input.addEventListener(
             "keydown",
-            function(event) {
+            async function(event) {
 
                 if (
                     event.key === "Enter"
@@ -1080,12 +1329,19 @@ except Exception:
 
                     event.preventDefault();
 
-                    executeTerminalCommand(
-                        terminalInput.value
+
+                    const command =
+                        input.value;
+
+
+                    input.value =
+                        "";
+
+
+                    await executeCommand(
+                        command
                     );
 
-                    terminalInput.value =
-                        "";
 
                     return;
                 }
@@ -1096,6 +1352,7 @@ except Exception:
                 ) {
 
                     event.preventDefault();
+
 
                     if (
                         history.length === 0
@@ -1111,7 +1368,7 @@ except Exception:
                         );
 
 
-                    terminalInput.value =
+                    input.value =
                         history[
                             historyIndex
                         ];
@@ -1125,6 +1382,7 @@ except Exception:
                 ) {
 
                     event.preventDefault();
+
 
                     if (
                         history.length === 0
@@ -1145,13 +1403,13 @@ except Exception:
                         history.length
                     ) {
 
-                        terminalInput.value =
+                        input.value =
                             "";
 
                     }
                     else {
 
-                        terminalInput.value =
+                        input.value =
                             history[
                                 historyIndex
                             ];
@@ -1164,11 +1422,11 @@ except Exception:
         );
 
 
-        /* =================================
+        /* ============================
            EDITOR TAB
-           ================================= */
+           ============================ */
 
-        codeEditor.addEventListener(
+        code.addEventListener(
             "keydown",
             function(event) {
 
@@ -1180,25 +1438,25 @@ except Exception:
 
 
                     const start =
-                        codeEditor.selectionStart;
+                        code.selectionStart;
 
                     const end =
-                        codeEditor.selectionEnd;
+                        code.selectionEnd;
 
 
-                    codeEditor.value =
-                        codeEditor.value.substring(
+                    code.value =
+                        code.value.substring(
                             0,
                             start
                         ) +
                         "    " +
-                        codeEditor.value.substring(
+                        code.value.substring(
                             end
                         );
 
 
-                    codeEditor.selectionStart =
-                        codeEditor.selectionEnd =
+                    code.selectionStart =
+                        code.selectionEnd =
                             start + 4;
 
                 }
@@ -1206,7 +1464,7 @@ except Exception:
 
                 /*
                  * Cmd+Enter on Mac
-                 * Ctrl+Enter on PC
+                 * Ctrl+Enter on Windows/iPad
                  */
 
                 if (
@@ -1219,7 +1477,7 @@ except Exception:
 
                     event.preventDefault();
 
-                    runEditorCode();
+                    runEditor();
 
                 }
 
@@ -1227,9 +1485,9 @@ except Exception:
         );
 
 
-        /* =================================
+        /* ============================
            AUTOSAVE
-           ================================= */
+           ============================ */
 
         try {
 
@@ -1243,19 +1501,19 @@ except Exception:
                 saved !== null
             ) {
 
-                codeEditor.value =
+                code.value =
                     saved;
 
             }
 
 
-            codeEditor.addEventListener(
+            code.addEventListener(
                 "input",
                 function() {
 
                     localStorage.setItem(
                         "thonny_pad_code",
-                        codeEditor.value
+                        code.value
                     );
 
                 }
@@ -1265,39 +1523,106 @@ except Exception:
         catch (error) {
 
             console.warn(
-                "Local storage unavailable",
+                "localStorage unavailable",
                 error
             );
 
         }
 
 
-        /* =================================
-           SERVICE WORKER
-           ================================= */
+        /* ============================
+           PACKAGE UI
+           ============================ */
 
-        if (
-            "serviceWorker" in navigator
-        ) {
+        function showPackages() {
 
-            window.addEventListener(
-                "load",
-                function() {
+            document.getElementById(
+                "package-panel"
+            ).style.display =
+                "block";
 
-                    navigator.serviceWorker
-                        .register("./sw.js")
-                        .catch(
-                            function(error) {
 
-                                console.error(
-                                    "Service worker failed:",
-                                    error
-                                );
+            updatePackageList();
 
-                            }
-                        );
+        }
 
-                }
+
+        function hidePackages() {
+
+            document.getElementById(
+                "package-panel"
+            ).style.display =
+                "none";
+
+        }
+
+
+        function updatePackageList() {
+
+            const packages =
+                JSON.parse(
+                    localStorage.getItem(
+                        "thonny_packages"
+                    ) || "[]"
+                );
+
+
+            const element =
+                document.getElementById(
+                    "installed-packages"
+                );
+
+
+            if (
+                packages.length === 0
+            ) {
+
+                element.textContent =
+                    "No extra packages installed.";
+
+                return;
+            }
+
+
+            element.textContent =
+                "Remembered packages:\n\n" +
+                packages
+                    .map(
+                        function(pkg) {
+                            return "• " + pkg;
+                        }
+                    )
+                    .join("\n");
+
+        }
+
+
+        async function installPackageFromPanel() {
+
+            const packageInput =
+                document.getElementById(
+                    "package-input"
+                );
+
+
+            const value =
+                packageInput.value.trim();
+
+
+            if (!value) {
+                return;
+            }
+
+
+            packageInput.value =
+                "";
+
+
+            hidePackages();
+
+
+            await installPackages(
+                [value]
             );
 
         }
