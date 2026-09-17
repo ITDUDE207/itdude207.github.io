@@ -2,84 +2,271 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Raw Python Statement DevTools Engine</title>
-    <!-- Load Pyodide from CDN -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
-</head>
-<body>
-    <h3 style="font-family: sans-serif; color: #222; max-width: 600px; line-height: 1.5;">
-        🐍 <b>Direct Python Syntax Engine Active.</b><br><br>
-        Open your <b>DevTools Console (F12)</b>. You can now execute actual, raw space-separated statements directly in the command prompt.
-    </h3>
 
-<script>
-    async function initNativeSpaceEngine() {
-        console.log("%c🐍 Initialising WebAssembly Python Environment...", "color: #4ec9b0; font-weight: bold;");
-        
-        try {
-            // 1. Fire up the foundational Pyodide engine
-            window.pyodide = await loadPyodide({
-                stdout: (text) => console.log(`%c[Python Output] ${text}`, "color: #b5cea8;"),
-                stderr: (text) => console.error(`[Python Error] ${text}`)
-            });
-            
-            console.log("%c📦 Loading micropip package manager...", "color: #ce9178;");
-            await window.pyodide.loadPackage("micropip");
-            
-            // 2. Setup the internal evaluation terminal loop 
-            window.pyodide.runPython(`
-                import sys
-                import code
-                compiler = code.InteractiveConsole()
-            `);
+    <meta
+        name="viewport"
+        content="width=device-width,
+                 initial-scale=1.0,
+                 maximum-scale=1.0,
+                 user-scalable=no"
+    >
 
-            // Core background compiler pipeline
-            const runPythonAsyncDirect = async (codeString) => {
-                try {
-                    let result = await window.pyodide.runPythonAsync(codeString);
-                    if (result !== undefined && result !== null) {
-                        console.log(`%c[Result] ${result}`, "color: #ce9178;");
-                    }
-                } catch (err) {
-                    console.error(`❌ Python Syntax Exception:\n${err.message}`);
-                }
-            };
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="black-translucent"
+    >
 
-            // 3. The Proxy Interceptor Strategy
-            // We map the root Python operator keyword to a Javascript Proxy object wrapper.
-            // This captures the space operation as a property lookup, avoiding any JS SyntaxErrors.
-            const generateSyntaxBridge = (keywordPrefix) => {
-                return new Proxy({}, {
-                    get: (target, remainingExpression) => {
-                        // Re-synthesize the exact command block back together with standard spaces
-                        const fullPythonStatement = `${keywordPrefix} ${remainingExpression}`;
-                        runPythonAsyncDirect(fullPythonStatement);
-                        return `⚡ Processing: "${fullPythonStatement}"`;
-                    }
-                });
-            };
+    <meta name="theme-color" content="#4CAF50">
 
-            // Bind native global statements directly to the page's global window execution namespace
-            Object.defineProperty(window, 'import', {
-                get: () => generateSyntaxBridge('import')
-            });
+    <title>Thonny Mobile</title>
 
-            Object.defineProperty(window, 'await', {
-                get: () => generateSyntaxBridge('await')
-            });
+    <link rel="manifest" href="manifest.json">
 
-            console.log("%c🚀 Direct Python Statement Shell Ready inside DevTools Console!", "color: #4ec9b0; font-weight: bold; font-size: 14px;");
-            console.log("Type standard commands using a dot (.) or array lookup to bridge spaces:\n");
-            console.log("👉 %cimport.math", "color: #9cdcfe; font-weight: bold;");
-            console.log("👉 %cimport.micropip", "color: #9cdcfe; font-weight: bold;");
-            console.log("👉 %cawait.micropip.install('regex')", "color: #9cdcfe; font-weight: bold;");
+    <!-- Brython -->
+    <script src="./brython.min.js"></script>
+    <script src="./brython_stdlib.js"></script>
 
-        } catch (error) {
-            console.error("Initialization failed:", error);
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-    }
 
-    initNativeSpaceEngine();
-</script>
+        body {
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            background: #1e1e1e;
+            color: #fff;
+
+            height: 100vh;
+            height: 100dvh;
+
+            display: flex;
+            flex-direction: column;
+
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background: #2d2d2d;
+            padding: 10px;
+
+            display: flex;
+            gap: 10px;
+
+            border-bottom: 2px solid #3d3d3d;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+
+            border: none;
+            padding: 10px 16px;
+
+            border-radius: 6px;
+
+            font-weight: bold;
+            font-size: 14px;
+
+            cursor: pointer;
+        }
+
+        button:active {
+            opacity: 0.75;
+        }
+
+        button.clear {
+            background: #f44336;
+        }
+
+        #code {
+            width: 100%;
+            flex: 1;
+
+            background: #151515;
+            color: #9cdcfe;
+
+            font-family:
+                "SFMono-Regular",
+                Consolas,
+                "Courier New",
+                monospace;
+
+            font-size: 16px;
+            line-height: 1.5;
+
+            padding: 15px;
+
+            border: none;
+            resize: none;
+            outline: none;
+
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .console-label {
+            background: #2d2d2d;
+
+            padding: 6px 15px;
+
+            font-size: 12px;
+            text-transform: uppercase;
+
+            color: #aaa;
+
+            border-top: 2px solid #3d3d3d;
+        }
+
+        #output {
+            height: 35%;
+
+            background: #000;
+            color: #00ff00;
+
+            font-family:
+                "SFMono-Regular",
+                Consolas,
+                monospace;
+
+            font-size: 15px;
+
+            padding: 15px;
+
+            overflow-y: auto;
+
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body onload="brython()">
+
+    <div class="toolbar">
+        <button onclick="runPython()">▶ Run Code</button>
+        <button class="clear" onclick="clearConsole()">
+            🗑 Clear Console
+        </button>
+    </div>
+
+    <textarea
+        id="code"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="# Write your Python code here...
+
+print('Hello iPad!')
+
+for i in range(5):
+    print(f'Step {i}')"
+    ></textarea>
+
+    <div class="console-label">
+        Shell / Output
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        // Register the PWA service worker.
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./sw.js")
+                .catch((error) => {
+                    console.error(
+                        "Service worker registration failed:",
+                        error
+                    );
+                });
+        }
+
+        // Save the editor contents locally.
+        const codeInput = document.getElementById("code");
+
+        const savedCode = localStorage.getItem("saved_code");
+
+        if (savedCode !== null) {
+            codeInput.value = savedCode;
+        }
+
+        codeInput.addEventListener("input", () => {
+            localStorage.setItem(
+                "saved_code",
+                codeInput.value
+            );
+        });
+
+        function clearConsole() {
+            document.getElementById("output").textContent = "";
+        }
+
+        async function runPython() {
+            const code = codeInput.value;
+            const output = document.getElementById("output");
+
+            output.textContent = "=== Running Script ===\n";
+
+            try {
+                /*
+                 * Brython does not provide a normal Python terminal.
+                 * This creates a temporary Python module containing
+                 * the user's code.
+                 */
+                const encodedCode = btoa(
+                    unescape(
+                        encodeURIComponent(code)
+                    )
+                );
+
+                const script = document.createElement("script");
+
+                script.type = "text/python";
+                script.textContent =
+                    "from browser import document\n" +
+                    "import sys\n" +
+                    "from io import StringIO\n" +
+                    "\n" +
+                    "output = StringIO()\n" +
+                    "old_stdout = sys.stdout\n" +
+                    "old_stderr = sys.stderr\n" +
+                    "sys.stdout = output\n" +
+                    "sys.stderr = output\n" +
+                    "\n" +
+                    "try:\n" +
+                    "    exec(\"\"\"" +
+                    code
+                        .replace(/\\/g, "\\\\")
+                        .replace(/"""/g, '\\"\\"\\"') +
+                    "\"\"\")\n" +
+                    "except Exception as e:\n" +
+                    "    print(type(e).__name__ + ': ' + str(e))\n" +
+                    "finally:\n" +
+                    "    sys.stdout = old_stdout\n" +
+                    "    sys.stderr = old_stderr\n" +
+                    "\n" +
+                    "document['output'].textContent += output.getvalue()\n";
+
+                document.body.appendChild(script);
+
+                setTimeout(() => {
+                    script.remove();
+                }, 1000);
+
+            } catch (error) {
+                output.textContent +=
+                    "\n[Error] " + error + "\n";
+            }
+        }
+    </script>
+
 </body>
 </html>
