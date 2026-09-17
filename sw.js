@@ -7,7 +7,7 @@ const CACHE_NAME = "thonny-pad-offline-v1";
 const APP_FILES = [
     "./",
     "./index.html",
-    "./script.js"
+    "./script.js",
     "./manifest.json"
 ];
 
