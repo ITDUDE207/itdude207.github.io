@@ -1,56 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width,
-                 initial-scale=1.0,
-                 maximum-scale=1.0,
-                 user-scalable=no"
+        content="width=device-width, initial-scale=1.0"
     >
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta
-        name="apple-mobile-web-app-status-bar-style"
-        content="black-translucent"
-    >
-
-    <meta name="theme-color" content="#4CAF50">
-
-    <title>Thonny Mobile</title>
-
-    <link rel="manifest" href="manifest.json">
+    <title>ThonnyPad</title>
 
     <!-- Brython -->
-    <script src="./brython.min.js"></script>
+    <script src="./brython.js"></script>
     <script src="./brython_stdlib.js"></script>
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-
+            margin: 0;
             background: #1e1e1e;
-            color: #fff;
-
-            height: 100vh;
-            height: 100dvh;
+            color: white;
+            font-family: Arial, sans-serif;
 
             display: flex;
             flex-direction: column;
 
-            overflow: hidden;
+            height: 100vh;
         }
 
         .toolbar {
@@ -59,214 +34,214 @@
 
             display: flex;
             gap: 10px;
-
-            border-bottom: 2px solid #3d3d3d;
         }
 
         button {
-            background: #4CAF50;
-            color: white;
-
-            border: none;
-            padding: 10px 16px;
-
+            border: 0;
             border-radius: 6px;
 
+            padding: 10px 16px;
+
+            background: #4caf50;
+            color: white;
+
             font-weight: bold;
-            font-size: 14px;
-
-            cursor: pointer;
+            font-size: 15px;
         }
 
-        button:active {
-            opacity: 0.75;
-        }
-
-        button.clear {
+        .clear {
             background: #f44336;
         }
 
         #code {
-            width: 100%;
             flex: 1;
 
-            background: #151515;
-            color: #9cdcfe;
+            width: 100%;
 
-            font-family:
-                "SFMono-Regular",
-                Consolas,
-                "Courier New",
-                monospace;
+            box-sizing: border-box;
 
-            font-size: 16px;
-            line-height: 1.5;
+            resize: none;
+            border: 0;
+            outline: none;
 
             padding: 15px;
 
-            border: none;
-            resize: none;
-            outline: none;
+            background: #151515;
+            color: #d4d4d4;
 
-            -webkit-user-select: text;
-            user-select: text;
+            font-family: monospace;
+            font-size: 17px;
+            line-height: 1.5;
         }
 
-        .console-label {
+        .label {
             background: #2d2d2d;
 
-            padding: 6px 15px;
-
-            font-size: 12px;
-            text-transform: uppercase;
+            padding: 7px 12px;
 
             color: #aaa;
 
-            border-top: 2px solid #3d3d3d;
+            font-size: 12px;
+            text-transform: uppercase;
         }
 
         #output {
-            height: 35%;
+            height: 30%;
+
+            box-sizing: border-box;
+
+            padding: 15px;
 
             background: #000;
             color: #00ff00;
 
-            font-family:
-                "SFMono-Regular",
-                Consolas,
-                monospace;
-
+            font-family: monospace;
             font-size: 15px;
 
-            padding: 15px;
+            white-space: pre-wrap;
 
             overflow-y: auto;
-
-            white-space: pre-wrap;
-            overflow-wrap: break-word;
         }
     </style>
 </head>
 
+
 <body onload="brython()">
 
     <div class="toolbar">
-        <button onclick="runPython()">▶ Run Code</button>
-        <button class="clear" onclick="clearConsole()">
-            🗑 Clear Console
+
+        <button onclick="runPython()">
+            ▶ Run Code
         </button>
+
+        <button
+            class="clear"
+            onclick="clearConsole()"
+        >
+            🗑 Clear
+        </button>
+
     </div>
 
-    <textarea
-        id="code"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        placeholder="# Write your Python code here...
 
-print('Hello iPad!')
+    <div class="label">
+        Editor — main.py
+    </div>
+
+
+    <textarea id="code">print("Hello from Brython!")
 
 for i in range(5):
-    print(f'Step {i}')"
-    ></textarea>
+    print("Step", i)</textarea>
 
-    <div class="console-label">
+
+    <div class="label">
         Shell / Output
     </div>
 
+
     <div id="output"></div>
 
+
     <script>
-        // Register the PWA service worker.
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("./sw.js")
-                .catch((error) => {
-                    console.error(
-                        "Service worker registration failed:",
-                        error
-                    );
-                });
-        }
-
-        // Save the editor contents locally.
-        const codeInput = document.getElementById("code");
-
-        const savedCode = localStorage.getItem("saved_code");
-
-        if (savedCode !== null) {
-            codeInput.value = savedCode;
-        }
-
-        codeInput.addEventListener("input", () => {
-            localStorage.setItem(
-                "saved_code",
-                codeInput.value
-            );
-        });
 
         function clearConsole() {
-            document.getElementById("output").textContent = "";
+            document.getElementById(
+                "output"
+            ).textContent = "";
         }
 
-        async function runPython() {
-            const code = codeInput.value;
-            const output = document.getElementById("output");
 
-            output.textContent = "=== Running Script ===\n";
+        function runPython() {
 
-            try {
-                /*
-                 * Brython does not provide a normal Python terminal.
-                 * This creates a temporary Python module containing
-                 * the user's code.
-                 */
-                const encodedCode = btoa(
-                    unescape(
-                        encodeURIComponent(code)
-                    )
+            const code =
+                document.getElementById(
+                    "code"
+                ).value;
+
+            const output =
+                document.getElementById(
+                    "output"
                 );
 
-                const script = document.createElement("script");
 
-                script.type = "text/python";
-                script.textContent =
-                    "from browser import document\n" +
-                    "import sys\n" +
-                    "from io import StringIO\n" +
-                    "\n" +
-                    "output = StringIO()\n" +
-                    "old_stdout = sys.stdout\n" +
-                    "old_stderr = sys.stderr\n" +
-                    "sys.stdout = output\n" +
-                    "sys.stderr = output\n" +
-                    "\n" +
-                    "try:\n" +
-                    "    exec(\"\"\"" +
-                    code
-                        .replace(/\\/g, "\\\\")
-                        .replace(/"""/g, '\\"\\"\\"') +
-                    "\"\"\")\n" +
-                    "except Exception as e:\n" +
-                    "    print(type(e).__name__ + ': ' + str(e))\n" +
-                    "finally:\n" +
-                    "    sys.stdout = old_stdout\n" +
-                    "    sys.stderr = old_stderr\n" +
-                    "\n" +
-                    "document['output'].textContent += output.getvalue()\n";
+            output.textContent =
+                "=== Running Script ===\n";
 
-                document.body.appendChild(script);
 
-                setTimeout(() => {
-                    script.remove();
-                }, 1000);
+            /*
+             * Create a temporary Brython
+             * Python script.
+             */
 
-            } catch (error) {
-                output.textContent +=
-                    "\n[Error] " + error + "\n";
-            }
+            const script =
+                document.createElement(
+                    "script"
+                );
+
+
+            script.type =
+                "text/python";
+
+
+            /*
+             * Redirect Python's print()
+             * into our output box.
+             */
+
+            script.textContent = `
+
+from browser import document
+import sys
+
+
+class Output:
+
+    def write(self, text):
+        document["output"].textContent += text
+
+    def flush(self):
+        pass
+
+
+sys.stdout = Output()
+sys.stderr = Output()
+
+
+try:
+
+${code.split("\n")
+    .map(line => "    " + line)
+    .join("\n")}
+
+except Exception as e:
+
+    print(
+        type(e).__name__ + ": " + str(e)
+    )
+
+`;
+
+
+            document.body.appendChild(
+                script
+            );
+
+
+            /*
+             * Remove the temporary script
+             * after Brython has processed it.
+             */
+
+            setTimeout(
+                () => script.remove(),
+                100
+            );
+
         }
+
     </script>
 
 </body>
+
 </html>
