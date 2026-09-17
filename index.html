@@ -2,55 +2,158 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width,
+                 initial-scale=1.0,
+                 maximum-scale=1.0,
+                 user-scalable=no"
+    >
+
+    <meta name="theme-color" content="#4CAF50">
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="black-translucent"
     >
 
     <title>ThonnyPad</title>
+
+    <link rel="manifest" href="./manifest.json">
 
     <!-- Brython -->
     <script src="./brython.js"></script>
     <script src="./brython_stdlib.js"></script>
 
+
     <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
         body {
             margin: 0;
+            padding: 0;
+
+            width: 100%;
+            height: 100%;
+
+            overflow: hidden;
+
             background: #1e1e1e;
             color: white;
-            font-family: Arial, sans-serif;
 
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        body {
             display: flex;
             flex-direction: column;
 
             height: 100vh;
+            height: 100dvh;
         }
 
+
+        /* ================================
+           TOOLBAR
+           ================================ */
+
         .toolbar {
-            background: #2d2d2d;
-            padding: 10px;
+            flex-shrink: 0;
 
             display: flex;
-            gap: 10px;
+            align-items: center;
+
+            gap: 7px;
+
+            padding: 8px;
+
+            background: #2d2d2d;
+
+            border-bottom: 1px solid #444;
+
+            overflow-x: auto;
         }
 
         button {
-            border: 0;
+            flex-shrink: 0;
+
+            border: none;
             border-radius: 6px;
 
-            padding: 10px 16px;
+            padding: 9px 13px;
 
-            background: #4caf50;
             color: white;
 
-            font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
+            font-weight: 600;
+
+            cursor: pointer;
         }
 
-        .clear {
-            background: #f44336;
+        button:active {
+            opacity: 0.7;
+        }
+
+        #run-button {
+            background: #4caf50;
+        }
+
+        #clear-button {
+            background: #d32f2f;
+        }
+
+        #restart-button {
+            background: #795548;
+        }
+
+        #status {
+            margin-left: auto;
+
+            color: #aaa;
+
+            font-size: 12px;
+
+            white-space: nowrap;
+        }
+
+
+        /* ================================
+           EDITOR
+           ================================ */
+
+        .editor-title,
+        .terminal-title {
+            flex-shrink: 0;
+
+            padding: 6px 12px;
+
+            background: #252526;
+
+            color: #aaa;
+
+            font-size: 12px;
+
+            border-bottom: 1px solid #3d3d3d;
+        }
+
+        .terminal-title {
+            border-top: 2px solid #3d3d3d;
         }
 
         #code {
@@ -58,121 +161,708 @@
 
             width: 100%;
 
-            box-sizing: border-box;
+            min-height: 0;
 
             resize: none;
+
             border: 0;
-            outline: none;
+            outline: 0;
 
             padding: 15px;
 
             background: #151515;
+
             color: #d4d4d4;
 
-            font-family: monospace;
-            font-size: 17px;
+            font-family:
+                "SFMono-Regular",
+                Consolas,
+                "Courier New",
+                monospace;
+
+            font-size: 16px;
+
             line-height: 1.5;
+
+            tab-size: 4;
+
+            white-space: pre;
+
+            overflow: auto;
+
+            -webkit-user-select: text;
+            user-select: text;
         }
 
-        .label {
-            background: #2d2d2d;
 
-            padding: 7px 12px;
+        /* ================================
+           TERMINAL
+           ================================ */
 
-            color: #aaa;
+        #terminal {
+            flex-shrink: 0;
 
-            font-size: 12px;
-            text-transform: uppercase;
-        }
+            height: 35%;
 
-        #output {
-            height: 30%;
+            min-height: 150px;
 
-            box-sizing: border-box;
+            display: flex;
 
-            padding: 15px;
+            flex-direction: column;
 
             background: #000;
-            color: #00ff00;
 
-            font-family: monospace;
+            font-family:
+                "SFMono-Regular",
+                Consolas,
+                "Courier New",
+                monospace;
+
             font-size: 15px;
+        }
+
+        #terminal-output {
+            flex: 1;
+
+            min-height: 0;
+
+            padding: 12px;
+
+            color: #00ff00;
 
             white-space: pre-wrap;
 
             overflow-y: auto;
+
+            overflow-wrap: break-word;
         }
+
+        #terminal-input-row {
+            flex-shrink: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            border-top: 1px solid #333;
+
+            background: #050505;
+        }
+
+        #prompt {
+            padding-left: 12px;
+
+            color: #00ff00;
+
+            font-family: monospace;
+
+            font-weight: bold;
+        }
+
+        #terminal-input {
+            flex: 1;
+
+            min-width: 0;
+
+            border: 0;
+            outline: 0;
+
+            padding: 10px;
+
+            background: transparent;
+
+            color: #fff;
+
+            font-family: monospace;
+
+            font-size: 15px;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .system {
+            color: #888;
+        }
+
+        .command {
+            color: #fff;
+        }
+
+
+        @media (max-width: 600px) {
+
+            .toolbar button {
+                padding: 8px 10px;
+                font-size: 13px;
+            }
+
+            #status {
+                display: none;
+            }
+
+            #terminal {
+                height: 38%;
+            }
+        }
+
     </style>
+
 </head>
 
 
-<body onload="brython()">
+<body>
+
+
+    <!-- ================================
+         TOOLBAR
+         ================================ -->
 
     <div class="toolbar">
 
-        <button onclick="runPython()">
-            ▶ Run Code
+        <button
+            id="run-button"
+            onclick="runEditorCode()"
+        >
+            ▶ Run
         </button>
 
         <button
-            class="clear"
-            onclick="clearConsole()"
+            id="clear-button"
+            onclick="clearTerminal()"
         >
             🗑 Clear
         </button>
 
+        <button
+            id="restart-button"
+            onclick="restartPython()"
+        >
+            ↻ Restart
+        </button>
+
+        <div id="status">
+            Starting Python...
+        </div>
+
     </div>
 
 
-    <div class="label">
+    <!-- ================================
+         EDITOR
+         ================================ -->
+
+    <div class="editor-title">
         Editor — main.py
     </div>
 
 
-    <textarea id="code">print("Hello from Brython!")
+    <textarea
+        id="code"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        placeholder="Write Python here..."
+>print("Hello from ThonnyPad!")
+
+name = "Alice"
+
+print("Hello", name)
 
 for i in range(5):
     print("Step", i)</textarea>
 
 
-    <div class="label">
-        Shell / Output
+    <!-- ================================
+         TERMINAL
+         ================================ -->
+
+    <div class="terminal-title">
+        Shell
     </div>
 
 
-    <div id="output"></div>
+    <div id="terminal">
 
+        <div id="terminal-output"></div>
+
+        <div id="terminal-input-row">
+
+            <span id="prompt">&gt;&gt;&gt;</span>
+
+            <input
+                id="terminal-input"
+                type="text"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                placeholder="Type a Python command..."
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================
+         JAVASCRIPT
+         ================================ -->
 
     <script>
 
-        function clearConsole() {
-            document.getElementById(
-                "output"
-            ).textContent = "";
+        const codeEditor =
+            document.getElementById("code");
+
+        const terminalOutput =
+            document.getElementById("terminal-output");
+
+        const terminalInput =
+            document.getElementById("terminal-input");
+
+        const status =
+            document.getElementById("status");
+
+
+        /* =================================
+           TERMINAL OUTPUT
+           ================================= */
+
+        function terminalWrite(
+            text,
+            className = ""
+        ) {
+
+            const span =
+                document.createElement("span");
+
+            span.textContent = text;
+
+            if (className) {
+                span.className = className;
+            }
+
+            terminalOutput.appendChild(span);
+
+            terminalOutput.scrollTop =
+                terminalOutput.scrollHeight;
         }
 
 
-        function runPython() {
+        function clearTerminal() {
+
+            terminalOutput.textContent = "";
+
+        }
+
+
+        function setStatus(text) {
+
+            status.textContent = text;
+
+        }
+
+
+        /* =================================
+           STARTUP
+           ================================= */
+
+        window.addEventListener(
+            "load",
+            function() {
+
+                if (
+                    typeof brython === "function"
+                ) {
+
+                    brython();
+
+                    setStatus(
+                        "Python ready"
+                    );
+
+                    terminalWrite(
+                        "ThonnyPad Python Shell\n",
+                        "system"
+                    );
+
+                    terminalWrite(
+                        "Type Python commands below.\n\n",
+                        "system"
+                    );
+
+                }
+                else {
+
+                    setStatus(
+                        "Brython failed"
+                    );
+
+                    terminalWrite(
+                        "ERROR: brython.js could not be loaded.\n",
+                        "error"
+                    );
+                }
+
+            }
+        );
+
+
+        /* =================================
+           RUN EDITOR
+           ================================= */
+
+        function runEditorCode() {
 
             const code =
-                document.getElementById(
-                    "code"
-                ).value;
+                codeEditor.value;
 
-            const output =
-                document.getElementById(
-                    "output"
+            if (!code.trim()) {
+
+                terminalWrite(
+                    "[Nothing to run]\n",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            setStatus("Running...");
+
+
+            terminalWrite(
+                "\n>>> Running main.py\n",
+                "system"
+            );
+
+
+            const encoded =
+                btoa(
+                    unescape(
+                        encodeURIComponent(code)
+                    )
                 );
 
 
-            output.textContent =
-                "=== Running Script ===\n";
+            const script =
+                document.createElement("script");
+
+
+            script.type =
+                "text/python";
+
+
+            script.textContent = `
+
+from browser import document
+import sys
+import base64
+import traceback
+
+
+class TerminalOutput:
+
+    def write(self, text):
+
+        document[
+            "terminal-output"
+        ].textContent += text
+
+        document[
+            "terminal-output"
+        ].scrollTop = (
+            document[
+                "terminal-output"
+            ].scrollHeight
+        )
+
+    def flush(self):
+        pass
+
+
+sys.stdout = TerminalOutput()
+sys.stderr = TerminalOutput()
+
+
+try:
+
+    source = base64.b64decode(
+        "${encoded}"
+    ).decode("utf-8")
+
+    exec(
+        compile(
+            source,
+            "main.py",
+            "exec"
+        ),
+        {
+            "__name__": "__main__"
+        }
+    )
+
+except Exception:
+
+    traceback.print_exc()
+
+`;
+
+
+            document.body.appendChild(script);
+
+
+            setTimeout(
+                function() {
+
+                    script.remove();
+
+                    setStatus("Finished");
+
+                },
+                100
+            );
+
+        }
+
+
+        /* =================================
+           TERMINAL HISTORY
+           ================================= */
+
+        const history = [];
+
+        let historyIndex = -1;
+
+
+        /* =================================
+           TERMINAL COMMAND
+           ================================= */
+
+        function executeTerminalCommand(
+            command
+        ) {
+
+            command =
+                command.trim();
+
+
+            if (!command) {
+                return;
+            }
+
+
+            history.push(command);
+
+            historyIndex =
+                history.length;
+
+
+            terminalWrite(
+                ">>> " + command + "\n",
+                "command"
+            );
+
+
+            /* -------------------------------
+               CLEAR
+               ------------------------------- */
+
+            if (
+                command === "clear"
+            ) {
+
+                clearTerminal();
+
+                return;
+            }
+
+
+            /* -------------------------------
+               HELP
+               ------------------------------- */
+
+            if (
+                command === "help"
+            ) {
+
+                terminalWrite(
+                    "Commands:\n" +
+                    "  clear\n" +
+                    "  help\n" +
+                    "  restart\n" +
+                    "  pip install PACKAGE\n\n"
+                );
+
+                return;
+            }
+
+
+            /* -------------------------------
+               RESTART
+               ------------------------------- */
+
+            if (
+                command === "restart"
+            ) {
+
+                restartPython();
+
+                return;
+            }
+
+
+            /* -------------------------------
+               PIP INSTALL
+               ------------------------------- */
+
+            /*
+             * This is the important part.
+             *
+             * If the user types:
+             *
+             * pip install requests
+             *
+             * we DO NOT run normal pip.
+             *
+             * Instead we call:
+             *
+             * micropip.install("requests")
+             */
+
+            if (
+                command === "pip" ||
+                command.startsWith("pip ")
+            ) {
+
+                handlePipCommand(
+                    command
+                );
+
+                return;
+            }
+
+
+            /* -------------------------------
+               NORMAL PYTHON
+               ------------------------------- */
+
+            runTerminalPython(
+                command
+            );
+
+        }
+
+
+        /* =================================
+           PIP COMMAND HANDLER
+           ================================= */
+
+        function handlePipCommand(
+            command
+        ) {
+
+            const parts =
+                command.split(/\s+/);
+
+
+            if (
+                parts.length < 3 ||
+                parts[0] !== "pip" ||
+                parts[1] !== "install"
+            ) {
+
+                terminalWrite(
+                    "Usage: pip install PACKAGE\n",
+                    "error"
+                );
+
+                return;
+            }
 
 
             /*
-             * Create a temporary Brython
-             * Python script.
+             * Everything after "pip install"
+             * is treated as a package specification.
+             *
+             * Examples:
+             *
+             * requests
+             * requests==2.32.5
+             * requests>=2
              */
+
+            const packageSpec =
+                parts
+                    .slice(2)
+                    .join(" ");
+
+
+            /*
+             * Don't pass arbitrary shell flags to
+             * micropip.
+             */
+
+            if (
+                packageSpec.startsWith("-")
+            ) {
+
+                terminalWrite(
+                    "pip options are not supported.\n" +
+                    "Use: pip install PACKAGE\n",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            installWithMicropip(
+                packageSpec
+            );
+
+        }
+
+
+        /* =================================
+           MICROPIP INSTALLATION
+           ================================= */
+
+        function installWithMicropip(
+            packageSpec
+        ) {
+
+            setStatus(
+                "Installing..."
+            );
+
+
+            terminalWrite(
+                "Using micropip to install " +
+                packageSpec +
+                "...\n",
+                "system"
+            );
+
+
+            /*
+             * Convert the package specification
+             * into a safely quoted Python string.
+             */
+
+            const safePackage =
+                packageSpec
+                    .replace(
+                        /\\/g,
+                        "\\\\"
+                    )
+                    .replace(
+                        /"/g,
+                        '\\"'
+                    );
+
 
             const script =
                 document.createElement(
@@ -184,21 +874,138 @@ for i in range(5):
                 "text/python";
 
 
+            script.textContent = `
+
+import micropip
+import traceback
+from browser import document
+
+
+async def install_package():
+
+    package_name = "${safePackage}"
+
+    try:
+
+        await micropip.install(
+            package_name
+        )
+
+        document[
+            "terminal-output"
+        ].textContent += (
+            "Successfully installed " +
+            package_name +
+            "\\n"
+        )
+
+        document[
+            "terminal-output"
+        ].scrollTop = (
+            document[
+                "terminal-output"
+            ].scrollHeight
+        )
+
+    except Exception:
+
+        document[
+            "terminal-output"
+        ].textContent += (
+            "ERROR installing " +
+            package_name +
+            ":\\n"
+        )
+
+        document[
+            "terminal-output"
+        ].textContent += (
+            traceback.format_exc()
+        )
+
+
+install_package()
+
+`;
+
+
+            document.body.appendChild(
+                script
+            );
+
+
             /*
-             * Redirect Python's print()
-             * into our output box.
+             * Give Brython time to process
+             * the generated Python script.
              */
+
+            setTimeout(
+                function() {
+
+                    script.remove();
+
+                    setStatus(
+                        "Python ready"
+                    );
+
+                },
+                1000
+            );
+
+        }
+
+
+        /* =================================
+           NORMAL TERMINAL PYTHON
+           ================================= */
+
+        function runTerminalPython(
+            command
+        ) {
+
+            const encoded =
+                btoa(
+                    unescape(
+                        encodeURIComponent(
+                            command
+                        )
+                    )
+                );
+
+
+            const script =
+                document.createElement(
+                    "script"
+                );
+
+
+            script.type =
+                "text/python";
+
 
             script.textContent = `
 
 from browser import document
 import sys
+import traceback
+import base64
 
 
 class Output:
 
     def write(self, text):
-        document["output"].textContent += text
+
+        document[
+            "terminal-output"
+        ].textContent += text
+
+        document[
+            "terminal-output"
+        ].scrollTop = (
+            document[
+                "terminal-output"
+            ].scrollHeight
+        )
 
     def flush(self):
         pass
@@ -210,15 +1017,38 @@ sys.stderr = Output()
 
 try:
 
-${code.split("\n")
-    .map(line => "    " + line)
-    .join("\n")}
+    source = base64.b64decode(
+        "${encoded}"
+    ).decode("utf-8")
 
-except Exception as e:
+    try:
 
-    print(
-        type(e).__name__ + ": " + str(e)
-    )
+        result = eval(
+            source,
+            {
+                "__name__": "__main__"
+            }
+        )
+
+        if result is not None:
+            print(repr(result))
+
+    except SyntaxError:
+
+        exec(
+            compile(
+                source,
+                "<console>",
+                "exec"
+            ),
+            {
+                "__name__": "__main__"
+            }
+        )
+
+except Exception:
+
+    traceback.print_exc()
 
 `;
 
@@ -228,14 +1058,246 @@ except Exception as e:
             );
 
 
-            /*
-             * Remove the temporary script
-             * after Brython has processed it.
-             */
-
             setTimeout(
                 () => script.remove(),
                 100
+            );
+
+        }
+
+
+        /* =================================
+           TERMINAL KEYBOARD
+           ================================= */
+
+        terminalInput.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    event.preventDefault();
+
+                    executeTerminalCommand(
+                        terminalInput.value
+                    );
+
+                    terminalInput.value =
+                        "";
+
+                    return;
+                }
+
+
+                if (
+                    event.key === "ArrowUp"
+                ) {
+
+                    event.preventDefault();
+
+                    if (
+                        history.length === 0
+                    ) {
+                        return;
+                    }
+
+
+                    historyIndex =
+                        Math.max(
+                            0,
+                            historyIndex - 1
+                        );
+
+
+                    terminalInput.value =
+                        history[
+                            historyIndex
+                        ];
+
+                    return;
+                }
+
+
+                if (
+                    event.key === "ArrowDown"
+                ) {
+
+                    event.preventDefault();
+
+                    if (
+                        history.length === 0
+                    ) {
+                        return;
+                    }
+
+
+                    historyIndex =
+                        Math.min(
+                            history.length,
+                            historyIndex + 1
+                        );
+
+
+                    if (
+                        historyIndex ===
+                        history.length
+                    ) {
+
+                        terminalInput.value =
+                            "";
+
+                    }
+                    else {
+
+                        terminalInput.value =
+                            history[
+                                historyIndex
+                            ];
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        /* =================================
+           EDITOR TAB
+           ================================= */
+
+        codeEditor.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Tab"
+                ) {
+
+                    event.preventDefault();
+
+
+                    const start =
+                        codeEditor.selectionStart;
+
+                    const end =
+                        codeEditor.selectionEnd;
+
+
+                    codeEditor.value =
+                        codeEditor.value.substring(
+                            0,
+                            start
+                        ) +
+                        "    " +
+                        codeEditor.value.substring(
+                            end
+                        );
+
+
+                    codeEditor.selectionStart =
+                        codeEditor.selectionEnd =
+                            start + 4;
+
+                }
+
+
+                /*
+                 * Cmd+Enter on Mac
+                 * Ctrl+Enter on PC
+                 */
+
+                if (
+                    event.key === "Enter" &&
+                    (
+                        event.metaKey ||
+                        event.ctrlKey
+                    )
+                ) {
+
+                    event.preventDefault();
+
+                    runEditorCode();
+
+                }
+
+            }
+        );
+
+
+        /* =================================
+           AUTOSAVE
+           ================================= */
+
+        try {
+
+            const saved =
+                localStorage.getItem(
+                    "thonny_pad_code"
+                );
+
+
+            if (
+                saved !== null
+            ) {
+
+                codeEditor.value =
+                    saved;
+
+            }
+
+
+            codeEditor.addEventListener(
+                "input",
+                function() {
+
+                    localStorage.setItem(
+                        "thonny_pad_code",
+                        codeEditor.value
+                    );
+
+                }
+            );
+
+        }
+        catch (error) {
+
+            console.warn(
+                "Local storage unavailable",
+                error
+            );
+
+        }
+
+
+        /* =================================
+           SERVICE WORKER
+           ================================= */
+
+        if (
+            "serviceWorker" in navigator
+        ) {
+
+            window.addEventListener(
+                "load",
+                function() {
+
+                    navigator.serviceWorker
+                        .register("./sw.js")
+                        .catch(
+                            function(error) {
+
+                                console.error(
+                                    "Service worker failed:",
+                                    error
+                                );
+
+                            }
+                        );
+
+                }
             );
 
         }
