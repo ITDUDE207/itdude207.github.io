@@ -1,56 +1,67 @@
 "use strict";
 
+/*
+ * ThonnyPad
+ * Pyodide browser Python IDE
+ *
+ * Features:
+ * - Run editor code
+ * - Interactive Python shell
+ * - Proper stdout/stderr handling
+ * - Python print() newlines preserved
+ * - input() support through a browser prompt
+ * - Command history
+ * - pip install PACKAGE through micropip
+ * - Package list persistence
+ * - Offline service-worker caching
+ * - Editor autosave
+ */
+
 
 /* =========================================
    GLOBAL STATE
    ========================================= */
 
 let pyodide = null;
-
 let pyodideReady = false;
 
-let stdoutBuffer = "";
-
-let stderrBuffer = "";
-
 const commandHistory = [];
-
 let historyIndex = 0;
 
 
 /* =========================================
-   DOM
+   DOM ELEMENTS
    ========================================= */
 
 const output =
-    document.getElementById(
-        "terminal-output"
-    );
+    document.getElementById("terminal-output");
 
 const input =
-    document.getElementById(
-        "terminal-input"
-    );
+    document.getElementById("terminal-input");
 
 const code =
-    document.getElementById(
-        "code"
-    );
+    document.getElementById("code");
 
 const status =
-    document.getElementById(
-        "status"
-    );
+    document.getElementById("status");
 
 
 /* =========================================
    TERMINAL OUTPUT
    ========================================= */
 
-function write(
-    text,
-    className = ""
-) {
+/*
+ * Write text to the terminal.
+ *
+ * textContent is deliberately used instead
+ * of innerHTML so Python output cannot
+ * accidentally be interpreted as HTML.
+ *
+ * white-space: pre-wrap in the CSS preserves
+ * Python's \n characters.
+ */
+
+function write(text, className = "") {
 
     if (
         text === null ||
@@ -59,29 +70,18 @@ function write(
         return;
     }
 
-
     const span =
-        document.createElement(
-            "span"
-        );
-
+        document.createElement("span");
 
     span.textContent =
         String(text);
 
-
     if (className) {
-
         span.className =
             className;
-
     }
 
-
-    output.appendChild(
-        span
-    );
-
+    output.appendChild(span);
 
     output.scrollTop =
         output.scrollHeight;
@@ -113,57 +113,39 @@ function setStatus(text) {
 
 /* =========================================
    PYODIDE STDOUT
-   =========================================
+   ========================================= */
 
-   IMPORTANT:
+/*
+ * IMPORTANT:
+ *
+ * Use "batched" instead of "raw".
+ *
+ * Pyodide gives us a complete stdout batch.
+ * We don't add or remove newlines ourselves.
+ *
+ * Therefore:
+ *
+ *     print("A")
+ *     print("B")
+ *
+ * remains:
+ *
+ *     A
+ *     B
+ *
+ * And:
+ *
+ *     print("A", end="")
+ *     print("B")
+ *
+ * remains:
+ *
+ *     AB
+ */
 
-   Pyodide's raw stdout callback gives us
-   output as individual characters.
+function pythonStdout(text) {
 
-   We preserve those characters instead
-   of adding/removing newlines ourselves.
-
-   This means:
-
-       print("A")
-       print("B")
-
-   correctly becomes:
-
-       A
-       B
-
-   and:
-
-       print("A", end="")
-       print("B")
-
-   correctly becomes:
-
-       AB
-*/
-
-
-function stdoutCharacter(character) {
-
-    stdoutBuffer += character;
-
-
-    /*
-     * Flush when Python sends a newline.
-     */
-
-    if (
-        character === "\n"
-    ) {
-
-        write(
-            stdoutBuffer
-        );
-
-        stdoutBuffer = "";
-
-    }
+    write(text);
 
 }
 
@@ -172,58 +154,12 @@ function stdoutCharacter(character) {
    PYODIDE STDERR
    ========================================= */
 
-function stderrCharacter(character) {
+function pythonStderr(text) {
 
-    stderrBuffer += character;
-
-
-    if (
-        character === "\n"
-    ) {
-
-        write(
-            stderrBuffer,
-            "error"
-        );
-
-        stderrBuffer = "";
-
-    }
-
-}
-
-
-/* =========================================
-   FLUSH REMAINING OUTPUT
-   ========================================= */
-
-function flushPythonOutput() {
-
-    if (
-        stdoutBuffer.length > 0
-    ) {
-
-        write(
-            stdoutBuffer
-        );
-
-        stdoutBuffer = "";
-
-    }
-
-
-    if (
-        stderrBuffer.length > 0
-    ) {
-
-        write(
-            stderrBuffer,
-            "error"
-        );
-
-        stderrBuffer = "";
-
-    }
+    write(
+        text,
+        "error"
+    );
 
 }
 
@@ -242,8 +178,8 @@ if (
             registration => {
 
                 console.log(
-                    "Offline service worker ready.",
-                    registration
+                    "ThonnyPad service worker registered:",
+                    registration.scope
                 );
 
             }
@@ -252,7 +188,7 @@ if (
             error => {
 
                 console.error(
-                    "Service worker error:",
+                    "Service worker registration failed:",
                     error
                 );
 
@@ -268,12 +204,19 @@ if (
 
 
 /* =========================================
-   START PYODIDE
+   PYODIDE INITIALIZATION
    ========================================= */
 
 async function initializePython() {
 
     try {
+
+        pyodideReady =
+            false;
+
+        setStatus(
+            "Loading Python..."
+        );
 
         write(
             "Loading Pyodide...\n",
@@ -281,16 +224,9 @@ async function initializePython() {
         );
 
 
-        setStatus(
-            "Loading Python..."
-        );
-
-
         /*
-         * IMPORTANT:
-         *
-         * pyodide.js and this indexURL must
-         * point to the same Pyodide version.
+         * This URL MUST match the version of
+         * pyodide.js loaded in index.html.
          */
 
         pyodide =
@@ -306,6 +242,11 @@ async function initializePython() {
          * Load micropip.
          */
 
+        write(
+            "Loading micropip...\n",
+            "system"
+        );
+
         await pyodide.loadPackage(
             "micropip"
         );
@@ -313,20 +254,42 @@ async function initializePython() {
 
         /*
          * Connect Python stdout/stderr.
+         *
+         * Batched output preserves newlines.
          */
 
         pyodide.setStdout({
 
-            raw:
-                stdoutCharacter
+            batched:
+                pythonStdout
 
         });
 
 
         pyodide.setStderr({
 
-            raw:
-                stderrCharacter
+            batched:
+                pythonStderr
+
+        });
+
+
+        /*
+         * input() support.
+         *
+         * Pyodide can use a JavaScript callback
+         * for Python's input().
+         */
+
+        pyodide.setStdin({
+
+            stdin: function() {
+
+                return window.prompt(
+                    "Python input:"
+                ) ?? "";
+
+            }
 
         });
 
@@ -345,16 +308,19 @@ async function initializePython() {
             "success"
         );
 
+        write(
+            "Type help() for Python help.\n",
+            "system"
+        );
 
         write(
-            "Type help() for Python help.\n\n",
+            "Type pip install PACKAGE to install packages.\n\n",
             "system"
         );
 
 
         /*
-         * Restore packages previously
-         * installed by the user.
+         * Restore previously installed packages.
          */
 
         await restorePackages();
@@ -369,18 +335,17 @@ async function initializePython() {
             error
         );
 
+        pyodideReady =
+            false;
 
         setStatus(
             "Python failed"
         );
 
-
         write(
-            "\nCould not start Pyodide:\n" +
+            "\nFailed to load Python:\n" +
             error +
-            "\n\n" +
-            "Open the app online at least once " +
-            "so Pyodide can be cached.\n",
+            "\n\n",
             "error"
         );
 
@@ -388,6 +353,10 @@ async function initializePython() {
 
 }
 
+
+/*
+ * Start Python.
+ */
 
 initializePython();
 
@@ -443,17 +412,27 @@ async function runEditor() {
 
     try {
 
-        await pyodide.runPythonAsync(
-            source
-        );
+        /*
+         * runPythonAsync allows async Python
+         * code as well as normal Python.
+         */
+
+        const result =
+            await pyodide.runPythonAsync(
+                source
+            );
 
 
         /*
-         * Make sure output that didn't end
-         * in a newline is displayed.
+         * If the program explicitly returns
+         * something through an expression,
+         * don't automatically print it here.
+         *
+         * Python's print() output already came
+         * through stdout.
          */
 
-        flushPythonOutput();
+        void result;
 
 
         setStatus(
@@ -463,18 +442,14 @@ async function runEditor() {
     }
     catch (error) {
 
-        flushPythonOutput();
-
-
         write(
             error.toString() +
             "\n",
             "error"
         );
 
-
         setStatus(
-            "Error"
+            "Python error"
         );
 
     }
@@ -483,7 +458,7 @@ async function runEditor() {
 
 
 /* =========================================
-   TERMINAL COMMAND
+   TERMINAL COMMAND EXECUTION
    ========================================= */
 
 async function executeCommand(
@@ -503,14 +478,21 @@ async function executeCommand(
     }
 
 
+    /*
+     * Save command to history.
+     */
+
     commandHistory.push(
         command
     );
 
-
     historyIndex =
         commandHistory.length;
 
+
+    /*
+     * Show command.
+     */
 
     write(
         ">>> " +
@@ -518,20 +500,6 @@ async function executeCommand(
         "\n",
         "command"
     );
-
-
-    if (
-        !pyodideReady
-    ) {
-
-        write(
-            "Python is not ready yet.\n",
-            "error"
-        );
-
-        return;
-
-    }
 
 
     /* -------------------------------------
@@ -563,13 +531,16 @@ async function executeCommand(
             "  clear\n" +
             "  help\n" +
             "  restart\n" +
+            "  packages\n" +
+            "  cache\n" +
             "  pip install PACKAGE\n\n" +
 
-            "Python examples:\n\n" +
+            "Examples:\n\n" +
 
             "  print('Hello')\n" +
+            "  2 + 2\n" +
             "  import math\n" +
-            "  math.sqrt(25)\n\n",
+            "  math.sqrt(25)\n",
 
             "system"
         );
@@ -595,6 +566,36 @@ async function executeCommand(
 
 
     /* -------------------------------------
+       PACKAGES
+       ------------------------------------- */
+
+    if (
+        command === "packages"
+    ) {
+
+        showPackages();
+
+        return;
+
+    }
+
+
+    /* -------------------------------------
+       CACHE
+       ------------------------------------- */
+
+    if (
+        command === "cache"
+    ) {
+
+        await showCacheInfo();
+
+        return;
+
+    }
+
+
+    /* -------------------------------------
        PIP
        ------------------------------------- */
 
@@ -613,10 +614,28 @@ async function executeCommand(
 
 
     /* -------------------------------------
-       NORMAL PYTHON
+       PYTHON
        ------------------------------------- */
 
+    if (
+        !pyodideReady
+    ) {
+
+        write(
+            "Python is not ready yet.\n",
+            "error"
+        );
+
+        return;
+
+    }
+
+
     try {
+
+        /*
+         * Evaluate the Python command.
+         */
 
         const result =
             await pyodide.runPythonAsync(
@@ -624,16 +643,17 @@ async function executeCommand(
             );
 
 
-        flushPythonOutput();
-
-
         /*
-         * Display expression results.
+         * runPythonAsync returns the value of
+         * the final expression.
          *
-         * Example:
+         * This makes:
          *
-         * >>> 2 + 2
-         * 4
+         *     >>> 2 + 2
+         *
+         * display:
+         *
+         *     4
          */
 
         if (
@@ -650,9 +670,6 @@ async function executeCommand(
 
     }
     catch (error) {
-
-        flushPythonOutput();
-
 
         write(
             error.toString() +
@@ -679,6 +696,12 @@ async function handlePip(
         );
 
 
+    /*
+     * Require:
+     *
+     * pip install PACKAGE
+     */
+
     if (
         parts.length < 3 ||
         parts[0] !== "pip" ||
@@ -700,20 +723,21 @@ async function handlePip(
 
 
     /*
-     * Don't interpret command-line options
-     * as package names.
+     * Don't pass pip command-line options
+     * to micropip.
      */
 
     if (
         packages.some(
-            pkg =>
-                pkg.startsWith("-")
+            packageName =>
+                packageName.startsWith("-")
         )
     ) {
 
         write(
-            "pip options are not supported yet.\n" +
-            "Use: pip install PACKAGE\n",
+            "pip command-line options are not supported yet.\n" +
+            "Use:\n\n" +
+            "pip install PACKAGE\n",
             "error"
         );
 
@@ -738,9 +762,28 @@ async function installPackages(
 ) {
 
     if (
+        !pyodideReady
+    ) {
+
+        write(
+            "Python is not ready.\n",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if (
         !packages ||
         packages.length === 0
     ) {
+
+        write(
+            "No package specified.\n",
+            "error"
+        );
 
         return;
 
@@ -761,7 +804,8 @@ async function installPackages(
     try {
 
         /*
-         * Give package names to Python.
+         * Pass package names from JavaScript
+         * into Python.
          */
 
         pyodide.globals.set(
@@ -769,6 +813,13 @@ async function installPackages(
             packages
         );
 
+
+        /*
+         * Install through micropip.
+         *
+         * micropip downloads compatible
+         * PyPI wheels and pure-Python packages.
+         */
 
         await pyodide.runPythonAsync(`
 
@@ -781,19 +832,12 @@ await micropip.install(
 `);
 
 
-        flushPythonOutput();
-
-
         /*
-         * Remember the package specification.
+         * Remember package names.
          */
 
         const savedPackages =
-            JSON.parse(
-                localStorage.getItem(
-                    "thonny_packages"
-                ) || "[]"
-            );
+            getSavedPackages();
 
 
         for (
@@ -816,11 +860,8 @@ await micropip.install(
         }
 
 
-        localStorage.setItem(
-            "thonny_packages",
-            JSON.stringify(
-                savedPackages
-            )
+        savePackages(
+            savedPackages
         );
 
 
@@ -833,8 +874,8 @@ await micropip.install(
 
 
         write(
-            "The browser will cache downloaded " +
-            "resources when possible.\n",
+            "Downloaded resources have been passed " +
+            "through the browser cache.\n",
             "system"
         );
 
@@ -849,19 +890,73 @@ await micropip.install(
     }
     catch (error) {
 
-        flushPythonOutput();
-
-
         write(
-            "\nInstallation failed:\n" +
+            "\nPackage installation failed:\n" +
             error +
-            "\n",
+            "\n\n" +
+
+            "Possible reasons:\n" +
+            "• The package is not compatible with Pyodide.\n" +
+            "• It requires native CPython extensions.\n" +
+            "• No compatible wheel exists.\n" +
+            "• You are offline and the package was not cached.\n",
+
             "error"
         );
 
 
         setStatus(
-            "Installation failed"
+            "Install failed"
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   PACKAGE STORAGE
+   ========================================= */
+
+function getSavedPackages() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(
+                "thonny_packages"
+            ) || "[]"
+        );
+
+    }
+    catch {
+
+        return [];
+
+    }
+
+}
+
+
+function savePackages(
+    packages
+) {
+
+    try {
+
+        localStorage.setItem(
+            "thonny_packages",
+            JSON.stringify(
+                packages
+            )
+        );
+
+    }
+    catch (error) {
+
+        console.warn(
+            "Could not save packages:",
+            error
         );
 
     }
@@ -875,16 +970,12 @@ await micropip.install(
 
 async function restorePackages() {
 
-    const saved =
-        JSON.parse(
-            localStorage.getItem(
-                "thonny_packages"
-            ) || "[]"
-        );
+    const packages =
+        getSavedPackages();
 
 
     if (
-        saved.length === 0
+        packages.length === 0
     ) {
 
         return;
@@ -893,7 +984,9 @@ async function restorePackages() {
 
 
     write(
-        "Restoring installed packages...\n",
+        "Restoring packages:\n" +
+        packages.join(", ") +
+        "\n",
         "system"
     );
 
@@ -902,7 +995,7 @@ async function restorePackages() {
 
         pyodide.globals.set(
             "_thonny_restore",
-            saved
+            packages
         );
 
 
@@ -917,30 +1010,142 @@ await micropip.install(
 `);
 
 
-        flushPythonOutput();
-
-
         write(
-            "Installed packages restored.\n",
+            "Packages restored successfully.\n",
             "success"
         );
 
     }
     catch (error) {
 
-        flushPythonOutput();
+        write(
+            "Some packages could not be restored.\n" +
+            "If you are offline, connect to the internet " +
+            "and run pip install again.\n",
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   CACHE INFORMATION
+   ========================================= */
+
+async function showCacheInfo() {
+
+    if (
+        !("caches" in window)
+    ) {
+
+        write(
+            "The Cache API is unavailable.\n",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const cache =
+            await caches.open(
+                "thonny-pad-v3"
+            );
+
+
+        const requests =
+            await cache.keys();
+
+
+        const pyodideFiles =
+            requests.filter(
+                request =>
+                    request.url.includes(
+                        "/pyodide/"
+                    )
+            );
+
+
+        write(
+            "\nOffline cache:\n\n" +
+
+            "Total cached resources: " +
+            requests.length +
+            "\n" +
+
+            "Pyodide resources: " +
+            pyodideFiles.length +
+            "\n\n",
+
+            "system"
+        );
+
+
+        if (
+            pyodideFiles.length === 0
+        ) {
+
+            write(
+                "No Pyodide resources have been " +
+                "cached yet.\n",
+                "system"
+            );
+
+            return;
+
+        }
 
 
         /*
-         * This is expected when a package was
-         * remembered but its files aren't
-         * available offline.
+         * Show the first 20 cached Pyodide
+         * resources.
          */
 
+        for (
+            const request
+            of pyodideFiles.slice(
+                0,
+                20
+            )
+        ) {
+
+            write(
+                "• " +
+                request.url +
+                "\n",
+                "system"
+            );
+
+        }
+
+
+        if (
+            pyodideFiles.length > 20
+        ) {
+
+            write(
+                "...and " +
+                (
+                    pyodideFiles.length - 20
+                ) +
+                " more.\n",
+                "system"
+            );
+
+        }
+
+    }
+    catch (error) {
+
         write(
-            "Some packages could not be restored.\n" +
-            "Connect to the internet once to " +
-            "download missing packages.\n",
+            "Could not inspect the cache:\n" +
+            error +
+            "\n",
             "error"
         );
 
@@ -955,14 +1160,13 @@ await micropip.install(
 
 async function restartPython() {
 
-    if (
-        !pyodide
-    ) {
-
-        return;
-
-    }
-
+    /*
+     * Reloading the page gives us a completely
+     * fresh JavaScript/Pyodide environment.
+     *
+     * Saved code and package names remain in
+     * localStorage.
+     */
 
     write(
         "\nRestarting Python...\n",
@@ -975,54 +1179,20 @@ async function restartPython() {
     );
 
 
-    try {
+    setTimeout(
+        () => {
 
-        /*
-         * Recreate the Pyodide interpreter
-         * instead of trying to manually clear
-         * Python's globals.
-         */
+            window.location.reload();
 
-        pyodideReady =
-            false;
-
-
-        /*
-         * Destroy the existing runtime.
-         */
-
-        pyodide = null;
-
-
-        /*
-         * Start it again.
-         */
-
-        await initializePython();
-
-
-        write(
-            "Python restarted.\n",
-            "success"
-        );
-
-    }
-    catch (error) {
-
-        write(
-            "Restart failed:\n" +
-            error +
-            "\n",
-            "error"
-        );
-
-    }
+        },
+        250
+    );
 
 }
 
 
 /* =========================================
-   TERMINAL INPUT
+   TERMINAL HISTORY
    ========================================= */
 
 input.addEventListener(
@@ -1030,7 +1200,9 @@ input.addEventListener(
     async function(event) {
 
 
-        /* ENTER */
+        /* -----------------------------------
+           ENTER
+           ----------------------------------- */
 
         if (
             event.key === "Enter"
@@ -1057,7 +1229,9 @@ input.addEventListener(
         }
 
 
-        /* UP */
+        /* -----------------------------------
+           ARROW UP
+           ----------------------------------- */
 
         if (
             event.key === "ArrowUp"
@@ -1093,7 +1267,9 @@ input.addEventListener(
         }
 
 
-        /* DOWN */
+        /* -----------------------------------
+           ARROW DOWN
+           ----------------------------------- */
 
         if (
             event.key === "ArrowDown"
@@ -1150,6 +1326,10 @@ code.addEventListener(
     "keydown",
     function(event) {
 
+        /*
+         * Press Tab to insert four spaces.
+         */
+
         if (
             event.key === "Tab"
         ) {
@@ -1169,7 +1349,9 @@ code.addEventListener(
                     0,
                     start
                 ) +
+
                 "    " +
+
                 code.value.substring(
                     end
                 );
@@ -1183,8 +1365,10 @@ code.addEventListener(
 
 
         /*
-         * Cmd+Enter = Mac
-         * Ctrl+Enter = Windows/Linux/iPad
+         * Cmd+Enter on Mac
+         *
+         * Ctrl+Enter on Windows,
+         * Linux and iPad keyboards.
          */
 
         if (
@@ -1206,7 +1390,7 @@ code.addEventListener(
 
 
 /* =========================================
-   AUTOSAVE EDITOR
+   EDITOR AUTOSAVE
    ========================================= */
 
 try {
@@ -1256,9 +1440,25 @@ catch (error) {
 
 function showPackages() {
 
-    document.getElementById(
-        "package-panel"
-    ).style.display =
+    const panel =
+        document.getElementById(
+            "package-panel"
+        );
+
+
+    if (!panel) {
+
+        write(
+            "Package panel is unavailable.\n",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    panel.style.display =
         "block";
 
 
@@ -1269,23 +1469,23 @@ function showPackages() {
 
 function hidePackages() {
 
-    document.getElementById(
-        "package-panel"
-    ).style.display =
-        "none";
+    const panel =
+        document.getElementById(
+            "package-panel"
+        );
+
+
+    if (panel) {
+
+        panel.style.display =
+            "none";
+
+    }
 
 }
 
 
 function updatePackageList() {
-
-    const packages =
-        JSON.parse(
-            localStorage.getItem(
-                "thonny_packages"
-            ) || "[]"
-        );
-
 
     const element =
         document.getElementById(
@@ -1293,12 +1493,23 @@ function updatePackageList() {
         );
 
 
+    if (!element) {
+
+        return;
+
+    }
+
+
+    const packages =
+        getSavedPackages();
+
+
     if (
         packages.length === 0
     ) {
 
         element.textContent =
-            "No extra packages installed.";
+            "No packages installed.";
 
         return;
 
@@ -1307,26 +1518,39 @@ function updatePackageList() {
 
     element.textContent =
         "Remembered packages:\n\n" +
+
         packages
             .map(
-                pkg =>
-                    "• " + pkg
+                packageName =>
+                    "• " +
+                    packageName
             )
             .join("\n");
 
 }
 
 
+/* =========================================
+   INSTALL FROM PACKAGE PANEL
+   ========================================= */
+
 async function installPackageFromPanel() {
 
-    const packageInput =
+    const element =
         document.getElementById(
             "package-input"
         );
 
 
+    if (!element) {
+
+        return;
+
+    }
+
+
     const packageName =
-        packageInput.value.trim();
+        element.value.trim();
 
 
     if (
@@ -1338,7 +1562,7 @@ async function installPackageFromPanel() {
     }
 
 
-    packageInput.value =
+    element.value =
         "";
 
 
@@ -1350,3 +1574,32 @@ async function installPackageFromPanel() {
     );
 
 }
+
+
+/* =========================================
+   EXPOSE FUNCTIONS TO HTML
+   ========================================= */
+
+/*
+ * Because index.html uses onclick="...",
+ * these functions need to be available on
+ * window.
+ */
+
+window.runEditor =
+    runEditor;
+
+window.clearTerminal =
+    clearTerminal;
+
+window.restartPython =
+    restartPython;
+
+window.showPackages =
+    showPackages;
+
+window.hidePackages =
+    hidePackages;
+
+window.installPackageFromPanel =
+    installPackageFromPanel;
