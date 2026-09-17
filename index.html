@@ -29,13 +29,12 @@
     <link rel="manifest" href="./manifest.json">
 
     <!--
-        Pyodide CDN.
+        Pyodide is loaded from the CDN.
 
-        The service worker caches this and the files
-        Pyodide requests, allowing later offline use.
+        The service worker in sw.js caches these
+        resources so they can be used offline.
     -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
-
 
     <style>
 
@@ -72,9 +71,9 @@
         }
 
 
-        /* ============================
+        /* =========================
            TOOLBAR
-           ============================ */
+           ========================= */
 
         .toolbar {
             flex-shrink: 0;
@@ -140,12 +139,11 @@
         }
 
 
-        /* ============================
+        /* =========================
            EDITOR
-           ============================ */
+           ========================= */
 
-        .editor-title,
-        .terminal-title {
+        .editor-title {
             flex-shrink: 0;
 
             padding: 6px 12px;
@@ -157,10 +155,6 @@
             font-size: 12px;
 
             border-bottom: 1px solid #3d3d3d;
-        }
-
-        .terminal-title {
-            border-top: 2px solid #3d3d3d;
         }
 
         #code {
@@ -202,9 +196,23 @@
         }
 
 
-        /* ============================
+        /* =========================
            TERMINAL
-           ============================ */
+           ========================= */
+
+        .terminal-title {
+            flex-shrink: 0;
+
+            padding: 6px 12px;
+
+            background: #252526;
+
+            color: #aaa;
+
+            font-size: 12px;
+
+            border-top: 2px solid #3d3d3d;
+        }
 
         #terminal {
             flex-shrink: 0;
@@ -241,7 +249,9 @@
 
             overflow-y: auto;
 
-            overflow-wrap: break-word;
+            overflow-x: auto;
+
+            overflow-wrap: anywhere;
 
             -webkit-overflow-scrolling: touch;
         }
@@ -264,6 +274,8 @@
             color: #00ff00;
 
             font-weight: bold;
+
+            white-space: nowrap;
         }
 
         #terminal-input {
@@ -285,6 +297,11 @@
             font-size: 15px;
         }
 
+
+        /* =========================
+           OUTPUT COLORS
+           ========================= */
+
         .error {
             color: #ff6b6b;
         }
@@ -302,9 +319,9 @@
         }
 
 
-        /* ============================
+        /* =========================
            PACKAGE PANEL
-           ============================ */
+           ========================= */
 
         #package-panel {
             display: none;
@@ -317,6 +334,7 @@
             transform: translate(-50%, -50%);
 
             width: min(500px, 92vw);
+
             max-height: 80vh;
 
             padding: 20px;
@@ -371,6 +389,10 @@
         }
 
 
+        /* =========================
+           MOBILE
+           ========================= */
+
         @media (max-width: 600px) {
 
             .toolbar button {
@@ -396,9 +418,9 @@
 <body>
 
 
-    <!-- ============================
+    <!-- =========================
          TOOLBAR
-         ============================ -->
+         ========================= -->
 
     <div class="toolbar">
 
@@ -437,9 +459,9 @@
     </div>
 
 
-    <!-- ============================
+    <!-- =========================
          EDITOR
-         ============================ -->
+         ========================= -->
 
     <div class="editor-title">
         Editor — main.py
@@ -463,9 +485,9 @@ for i in range(5):
     print("Step", i)</textarea>
 
 
-    <!-- ============================
+    <!-- =========================
          TERMINAL
-         ============================ -->
+         ========================= -->
 
     <div class="terminal-title">
         Python Shell
@@ -497,9 +519,9 @@ for i in range(5):
     </div>
 
 
-    <!-- ============================
+    <!-- =========================
          PACKAGE WINDOW
-         ============================ -->
+         ========================= -->
 
     <div id="package-panel">
 
@@ -514,8 +536,8 @@ for i in range(5):
 
         <p>
             Install a package while online.
-            Its downloaded files will be cached
-            by the service worker.
+            Downloaded resources are cached by
+            the service worker when possible.
         </p>
 
         <br>
@@ -535,1099 +557,15 @@ for i in range(5):
             Install
         </button>
 
-        <div id="installed-packages">
-        </div>
+        <div id="installed-packages"></div>
 
     </div>
 
 
-    <script>
-
-        let pyodide = null;
-
-        let pyodideReady = false;
-
-        const history = [];
-
-        let historyIndex = 0;
-
-
-        const output =
-            document.getElementById(
-                "terminal-output"
-            );
-
-        const input =
-            document.getElementById(
-                "terminal-input"
-            );
-
-        const code =
-            document.getElementById(
-                "code"
-            );
-
-        const status =
-            document.getElementById(
-                "status"
-            );
-
-
-        /* ============================
-           OUTPUT
-           ============================ */
-
-        function write(
-            text,
-            className = ""
-        ) {
-
-            const span =
-                document.createElement(
-                    "span"
-                );
-
-            span.textContent =
-                text;
-
-            if (className) {
-                span.className =
-                    className;
-            }
-
-            output.appendChild(span);
-
-            output.scrollTop =
-                output.scrollHeight;
-        }
-
-
-        function clearTerminal() {
-            output.textContent = "";
-        }
-
-
-        function setStatus(text) {
-            status.textContent = text;
-        }
-
-
-        /* ============================
-           SERVICE WORKER
-           ============================ */
-
-        if ("serviceWorker" in navigator) {
-
-            navigator.serviceWorker
-                .register("./sw.js")
-                .then(function(registration) {
-
-                    console.log(
-                        "Offline cache enabled",
-                        registration
-                    );
-
-                })
-                .catch(function(error) {
-
-                    console.error(
-                        "Service worker error:",
-                        error
-                    );
-
-                    write(
-                        "Warning: offline cache could not start.\n",
-                        "error"
-                    );
-
-                });
-
-        }
-
-
-        /* ============================
-           PYODIDE START
-           ============================ */
-
-        async function initializePython() {
-
-            try {
-
-                write(
-                    "Loading Pyodide...\n",
-                    "system"
-                );
-
-                setStatus(
-                    "Loading Python..."
-                );
-
-
-                /*
-                 * IMPORTANT:
-                 *
-                 * indexURL points to the same
-                 * CDN directory as pyodide.js.
-                 *
-                 * The service worker caches
-                 * requests to this CDN.
-                 */
-
-                pyodide =
-                    await loadPyodide({
-                        indexURL:
-                            "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/"
-                    });
-
-
-                /*
-                 * Load micropip.
-                 */
-
-                await pyodide.loadPackage(
-                    "micropip"
-                );
-
-
-                /*
-                 * Redirect stdout.
-                 */
-
-                pyodide.setStdout({
-                    batched: function(text) {
-
-                        write(text);
-
-                    }
-                });
-
-
-                /*
-                 * Redirect stderr.
-                 */
-
-                pyodide.setStderr({
-                    batched: function(text) {
-
-                        write(
-                            text,
-                            "error"
-                        );
-
-                    }
-                });
-
-
-                pyodideReady = true;
-
-
-                setStatus(
-                    "Python ready"
-                );
-
-
-                write(
-                    "Python environment ready.\n",
-                    "success"
-                );
-
-
-                write(
-                    "Type help() for Python help.\n\n",
-                    "system"
-                );
-
-
-                /*
-                 * Reinstall packages that the user
-                 * previously installed.
-                 *
-                 * The actual wheel/package files
-                 * may already be in the service
-                 * worker cache.
-                 */
-
-                await restorePackages();
-
-
-                input.focus();
-
-            }
-            catch (error) {
-
-                console.error(error);
-
-                setStatus(
-                    "Python failed"
-                );
-
-                write(
-                    "\nCould not start Pyodide:\n" +
-                    error +
-                    "\n\n" +
-                    "Make sure you first open this app " +
-                    "while online so the CDN files can " +
-                    "be cached.\n",
-                    "error"
-                );
-
-            }
-
-        }
-
-
-        initializePython();
-
-
-        /* ============================
-           RUN EDITOR
-           ============================ */
-
-        async function runEditor() {
-
-            if (!pyodideReady) {
-
-                write(
-                    "Python is still loading...\n",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            const source =
-                code.value;
-
-
-            if (!source.trim()) {
-
-                write(
-                    "[Nothing to run]\n",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            setStatus(
-                "Running..."
-            );
-
-
-            write(
-                "\n>>> Running main.py\n",
-                "system"
-            );
-
-
-            try {
-
-                await pyodide.runPythonAsync(
-                    source
-                );
-
-
-                setStatus(
-                    "Python ready"
-                );
-
-            }
-            catch (error) {
-
-                write(
-                    error.toString() +
-                    "\n",
-                    "error"
-                );
-
-                setStatus(
-                    "Error"
-                );
-
-            }
-
-        }
-
-
-        /* ============================
-           TERMINAL COMMAND
-           ============================ */
-
-        async function executeCommand(
-            command
-        ) {
-
-            command =
-                command.trim();
-
-
-            if (!command) {
-                return;
-            }
-
-
-            history.push(command);
-
-            historyIndex =
-                history.length;
-
-
-            write(
-                ">>> " +
-                command +
-                "\n",
-                "command"
-            );
-
-
-            if (!pyodideReady) {
-
-                write(
-                    "Python is not ready yet.\n",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            /* CLEAR */
-
-            if (
-                command === "clear"
-            ) {
-
-                clearTerminal();
-
-                return;
-            }
-
-
-            /* HELP */
-
-            if (
-                command === "help"
-            ) {
-
-                write(
-                    "ThonnyPad commands:\n\n" +
-                    "  clear\n" +
-                    "  help\n" +
-                    "  restart\n" +
-                    "  pip install PACKAGE\n\n" +
-
-                    "Examples:\n\n" +
-
-                    "  pip install requests\n" +
-                    "  pip install beautifulsoup4\n" +
-                    "  pip install requests==2.32.3\n\n"
-                );
-
-                return;
-            }
-
-
-            /* RESTART */
-
-            if (
-                command === "restart"
-            ) {
-
-                await restartPython();
-
-                return;
-            }
-
-
-            /* PIP */
-
-            if (
-                command === "pip" ||
-                command.startsWith("pip ")
-            ) {
-
-                await handlePip(
-                    command
-                );
-
-                return;
-            }
-
-
-            /* NORMAL PYTHON */
-
-            try {
-
-                const result =
-                    await pyodide.runPythonAsync(
-                        command
-                    );
-
-
-                if (
-                    result !== undefined &&
-                    result !== null
-                ) {
-
-                    write(
-                        String(result) +
-                        "\n"
-                    );
-
-                }
-
-            }
-            catch (error) {
-
-                write(
-                    error.toString() +
-                    "\n",
-                    "error"
-                );
-
-            }
-
-        }
-
-
-        /* ============================
-           PIP HANDLER
-           ============================ */
-
-        async function handlePip(
-            command
-        ) {
-
-            const parts =
-                command.split(/\s+/);
-
-
-            if (
-                parts.length < 3 ||
-                parts[0] !== "pip" ||
-                parts[1] !== "install"
-            ) {
-
-                write(
-                    "Usage: pip install PACKAGE\n",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            const packages =
-                parts.slice(2);
-
-
-            /*
-             * We currently support package
-             * specifications, not pip options.
-             */
-
-            if (
-                packages.some(
-                    function(pkg) {
-                        return pkg.startsWith("-");
-                    }
-                )
-            ) {
-
-                write(
-                    "pip options are not supported yet.\n" +
-                    "Use: pip install PACKAGE\n",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            await installPackages(
-                packages
-            );
-
-        }
-
-
-        /* ============================
-           MICROPIP INSTALL
-           ============================ */
-
-        async function installPackages(
-            packages
-        ) {
-
-            setStatus(
-                "Installing..."
-            );
-
-
-            write(
-                "Using micropip...\n",
-                "system"
-            );
-
-
-            try {
-
-                /*
-                 * Store package list in Python.
-                 */
-
-                pyodide.globals.set(
-                    "_thonny_packages",
-                    packages
-                );
-
-
-                await pyodide.runPythonAsync(`
-
-import micropip
-
-await micropip.install(
-    _thonny_packages
-)
-
-`);
-
-
-                /*
-                 * Remember packages in localStorage.
-                 */
-
-                const oldPackages =
-                    JSON.parse(
-                        localStorage.getItem(
-                            "thonny_packages"
-                        ) || "[]"
-                    );
-
-
-                for (
-                    const pkg of packages
-                ) {
-
-                    /*
-                     * Remove simple version
-                     * formatting when checking
-                     * whether it is already listed.
-                     */
-
-                    if (
-                        !oldPackages.includes(pkg)
-                    ) {
-
-                        oldPackages.push(pkg);
-
-                    }
-
-                }
-
-
-                localStorage.setItem(
-                    "thonny_packages",
-                    JSON.stringify(
-                        oldPackages
-                    )
-                );
-
-
-                write(
-                    "Successfully installed: " +
-                    packages.join(", ") +
-                    "\n",
-                    "success"
-                );
-
-
-                write(
-                    "Package files are now available " +
-                    "from the browser cache when cached " +
-                    "by the service worker.\n",
-                    "system"
-                );
-
-
-                setStatus(
-                    "Python ready"
-                );
-
-
-                updatePackageList();
-
-            }
-            catch (error) {
-
-                write(
-                    "\nInstallation failed:\n" +
-                    error +
-                    "\n",
-                    "error"
-                );
-
-
-                setStatus(
-                    "Installation failed"
-                );
-
-            }
-
-        }
-
-
-        /* ============================
-           RESTORE PACKAGES
-           ============================ */
-
-        async function restorePackages() {
-
-            const saved =
-                JSON.parse(
-                    localStorage.getItem(
-                        "thonny_packages"
-                    ) || "[]"
-                );
-
-
-            if (
-                saved.length === 0
-            ) {
-                return;
-            }
-
-
-            write(
-                "Restoring installed packages...\n",
-                "system"
-            );
-
-
-            try {
-
-                pyodide.globals.set(
-                    "_thonny_restore",
-                    saved
-                );
-
-
-                await pyodide.runPythonAsync(`
-
-import micropip
-
-await micropip.install(
-    _thonny_restore
-)
-
-`);
-
-
-                write(
-                    "Installed packages restored.\n",
-                    "success"
-                );
-
-            }
-            catch (error) {
-
-                /*
-                 * This can happen if the user
-                 * is offline and a package wasn't
-                 * previously cached.
-                 */
-
-                write(
-                    "Some packages could not be restored " +
-                    "offline. Connect to the internet " +
-                    "once to download them again.\n",
-                    "error"
-                );
-
-            }
-
-        }
-
-
-        /* ============================
-           RESTART
-           ============================ */
-
-        async function restartPython() {
-
-            write(
-                "\nRestarting Python...\n",
-                "system"
-            );
-
-
-            pyodideReady =
-                false;
-
-
-            setStatus(
-                "Restarting..."
-            );
-
-
-            try {
-
-                /*
-                 * Reset Python globals.
-                 */
-
-                await pyodide.runPythonAsync(`
-
-globals().clear()
-
-import sys
-
-`);
-
-                pyodideReady =
-                    true;
-
-
-                write(
-                    "Python restarted.\n",
-                    "success"
-                );
-
-
-                setStatus(
-                    "Python ready"
-                );
-
-            }
-            catch (error) {
-
-                write(
-                    "Restart failed: " +
-                    error +
-                    "\n",
-                    "error"
-                );
-
-            }
-
-        }
-
-
-        /* ============================
-           TERMINAL INPUT
-           ============================ */
-
-        input.addEventListener(
-            "keydown",
-            async function(event) {
-
-                if (
-                    event.key === "Enter"
-                ) {
-
-                    event.preventDefault();
-
-
-                    const command =
-                        input.value;
-
-
-                    input.value =
-                        "";
-
-
-                    await executeCommand(
-                        command
-                    );
-
-
-                    return;
-                }
-
-
-                if (
-                    event.key === "ArrowUp"
-                ) {
-
-                    event.preventDefault();
-
-
-                    if (
-                        history.length === 0
-                    ) {
-                        return;
-                    }
-
-
-                    historyIndex =
-                        Math.max(
-                            0,
-                            historyIndex - 1
-                        );
-
-
-                    input.value =
-                        history[
-                            historyIndex
-                        ];
-
-                    return;
-                }
-
-
-                if (
-                    event.key === "ArrowDown"
-                ) {
-
-                    event.preventDefault();
-
-
-                    if (
-                        history.length === 0
-                    ) {
-                        return;
-                    }
-
-
-                    historyIndex =
-                        Math.min(
-                            history.length,
-                            historyIndex + 1
-                        );
-
-
-                    if (
-                        historyIndex ===
-                        history.length
-                    ) {
-
-                        input.value =
-                            "";
-
-                    }
-                    else {
-
-                        input.value =
-                            history[
-                                historyIndex
-                            ];
-
-                    }
-
-                }
-
-            }
-        );
-
-
-        /* ============================
-           EDITOR TAB
-           ============================ */
-
-        code.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (
-                    event.key === "Tab"
-                ) {
-
-                    event.preventDefault();
-
-
-                    const start =
-                        code.selectionStart;
-
-                    const end =
-                        code.selectionEnd;
-
-
-                    code.value =
-                        code.value.substring(
-                            0,
-                            start
-                        ) +
-                        "    " +
-                        code.value.substring(
-                            end
-                        );
-
-
-                    code.selectionStart =
-                        code.selectionEnd =
-                            start + 4;
-
-                }
-
-
-                /*
-                 * Cmd+Enter on Mac
-                 * Ctrl+Enter on Windows/iPad
-                 */
-
-                if (
-                    event.key === "Enter" &&
-                    (
-                        event.metaKey ||
-                        event.ctrlKey
-                    )
-                ) {
-
-                    event.preventDefault();
-
-                    runEditor();
-
-                }
-
-            }
-        );
-
-
-        /* ============================
-           AUTOSAVE
-           ============================ */
-
-        try {
-
-            const saved =
-                localStorage.getItem(
-                    "thonny_pad_code"
-                );
-
-
-            if (
-                saved !== null
-            ) {
-
-                code.value =
-                    saved;
-
-            }
-
-
-            code.addEventListener(
-                "input",
-                function() {
-
-                    localStorage.setItem(
-                        "thonny_pad_code",
-                        code.value
-                    );
-
-                }
-            );
-
-        }
-        catch (error) {
-
-            console.warn(
-                "localStorage unavailable",
-                error
-            );
-
-        }
-
-
-        /* ============================
-           PACKAGE UI
-           ============================ */
-
-        function showPackages() {
-
-            document.getElementById(
-                "package-panel"
-            ).style.display =
-                "block";
-
-
-            updatePackageList();
-
-        }
-
-
-        function hidePackages() {
-
-            document.getElementById(
-                "package-panel"
-            ).style.display =
-                "none";
-
-        }
-
-
-        function updatePackageList() {
-
-            const packages =
-                JSON.parse(
-                    localStorage.getItem(
-                        "thonny_packages"
-                    ) || "[]"
-                );
-
-
-            const element =
-                document.getElementById(
-                    "installed-packages"
-                );
-
-
-            if (
-                packages.length === 0
-            ) {
-
-                element.textContent =
-                    "No extra packages installed.";
-
-                return;
-            }
-
-
-            element.textContent =
-                "Remembered packages:\n\n" +
-                packages
-                    .map(
-                        function(pkg) {
-                            return "• " + pkg;
-                        }
-                    )
-                    .join("\n");
-
-        }
-
-
-        async function installPackageFromPanel() {
-
-            const packageInput =
-                document.getElementById(
-                    "package-input"
-                );
-
-
-            const value =
-                packageInput.value.trim();
-
-
-            if (!value) {
-                return;
-            }
-
-
-            packageInput.value =
-                "";
-
-
-            hidePackages();
-
-
-            await installPackages(
-                [value]
-            );
-
-        }
-
-    </script>
+    <!--
+        All application JavaScript lives here.
+    -->
+    <script src="./script.js"></script>
 
 </body>
 
