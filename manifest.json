@@ -1,0 +1,15 @@
+{
+  "name": "iPad Thonny Pad",
+  "short_name": "ThonnyPad",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1e1e1e",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
