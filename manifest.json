@@ -1,15 +1,22 @@
 {
-  "name": "iPad Thonny Pad",
-  "short_name": "ThonnyPad",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#1e1e1e",
-  "theme_color": "#4CAF50",
-  "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
+    "name": "ThonnyPad",
+    "short_name": "ThonnyPad",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#1e1e1e",
+    "theme_color": "#4CAF50",
+    "description": "Offline Python editor and terminal powered by Pyodide.",
+    "icons": [
+        {
+            "src": "./icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "./icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
 }
