@@ -1,33 +1,38 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A retro 1990s-style personal homepage celebrating classic computing and the early internet.">
     <title>*** Welcome to My Awesome Home Page! ***</title>
+
     <style>
         body {
-            /* Classic repeating starfield background */
-            background-image: url('https://archive.org');
-            background-repeat: repeat;
-            background-color: #000000;
-            color: #00FF00; /* Neon Matrix Green */
-            font-family: "Comic Sans MS", "Arial", "Times New Roman", sans-serif;
+            background-color: #000;
+            background-image:
+                radial-gradient(circle, #fff 1px, transparent 1.5px),
+                radial-gradient(circle, #00ffff 1px, transparent 1.5px),
+                radial-gradient(circle, #ff00ff 1px, transparent 1.5px);
+            background-size: 97px 83px, 137px 113px, 181px 157px;
+            background-position: 0 0, 43px 29px, 91px 71px;
+            color: #00ff00;
+            font-family: "Comic Sans MS", Arial, sans-serif;
             margin: 20px;
         }
 
         a {
-            color: #FF00FF; /* Bright Fuchsia Links */
+            color: #ff00ff;
             font-weight: bold;
         }
 
         a:visited {
-            color: #00FFFF; /* Cyan Visited Links */
+            color: #00ffff;
         }
 
-        /* 90s Style Table Layout */
         table {
-            border: 4px ridge #FF0000;
-            background-color: #111111;
+            border: 4px ridge #ff0000;
+            background-color: #111;
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
@@ -40,17 +45,17 @@
 
         .header {
             text-align: center;
-            border-bottom: 4px ridge #FF0000;
+            border-bottom: 4px ridge #ff0000;
         }
 
         .sidebar {
             width: 25%;
-            border-right: 2px dashed #00FF00;
+            border-right: 2px dashed #00ff00;
         }
 
         .blink {
-            animation: blinker 1.0s linear infinite;
-            color: #FF0000;
+            animation: blinker 1s linear infinite;
+            color: #ff0000;
             font-weight: bold;
         }
 
@@ -59,103 +64,260 @@
         }
 
         .counter {
-            background-color: #000000;
-            color: #FF0000;
-            font-family: 'Courier New', monospace;
+            display: inline-block;
+            background: #000;
+            color: #ff0000;
+            font-family: "Courier New", monospace;
             font-size: 20px;
             padding: 2px 8px;
-            border: 2px inset #888888;
+            border: 2px inset #888;
             letter-spacing: 2px;
+        }
+
+        .construction {
+            display: inline-block;
+            padding: 8px 14px;
+            color: #000;
+            background: repeating-linear-gradient(
+                135deg,
+                #ffff00 0 12px,
+                #000 12px 24px
+            );
+            border: 3px ridge #aaa;
+        }
+
+        .construction span {
+            display: block;
+            padding: 7px;
+            background: #000;
+            color: #ffff00;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            font-size: 17px;
+        }
+
+        .badge {
+            display: inline-flex;
+            width: 88px;
+            height: 31px;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border: 2px outset #ccc;
+            font-family: "Courier New", monospace;
+            font-size: 10px;
+            font-weight: bold;
+            text-decoration: none;
+            line-height: 1.1;
+            vertical-align: middle;
+        }
+
+        .neocities-badge {
+            color: #fff;
+            background: linear-gradient(135deg, #e34b70, #7137a5);
+        }
+
+        .netscape-badge {
+            color: #ffff00;
+            background: linear-gradient(135deg, #00185c, #007cbb);
+        }
+
+        .guestbook-input {
+            background: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                margin: 6px;
+            }
+
+            td {
+                padding: 8px;
+            }
+
+            .sidebar {
+                width: auto;
+            }
+
+            .guestbook-input {
+                width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blink {
+                animation: none;
+            }
+
+            marquee {
+                /* Static content remains readable when motion is reduced. */
+                scroll-behavior: auto;
+            }
         }
     </style>
 </head>
+
 <body>
 
-    <!-- Header Section -->
-    <marquee scrollamount="5" behavior="scroll" direction="left" style="color: #FFFF00; font-size: 20px; font-weight: bold;">
-        +++ WELCOME TO THE WORLD WIDE WEB PORTAL OF A TRUE NETIZEN! +++ UPDATE: OCT 2026 +++ LEAVE A MESSAGE IN THE GUESTBOOK! +++
+    <marquee scrollamount="5" behavior="scroll" direction="left"
+        style="color:#ffff00;font-size:20px;font-weight:bold;">
+        +++ WELCOME TO THE WORLD WIDE WEB PORTAL OF A TRUE NETIZEN!
+        +++ UPDATE: OCT 2026 +++ LEAVE A MESSAGE IN THE GUESTBOOK! +++
     </marquee>
 
     <table>
-        <!-- Top Banner Area -->
         <tr>
             <td colspan="2" class="header">
-                <!-- Under Construction GIF Overlay Placeholder -->
-                <img src="https://archive.org" alt="Under Construction" /><br>
-                <h1 style="color: #00FFFF; text-shadow: 2px 2px #FF00FF;">~ My Cyber Home in Cyberspace ~</h1>
-                <p class="blink">*** SITE BEST VIEWED IN NETSCAPE NAVIGATOR 4.0 OR HIGHER AT 800x600 RESOLUTION ***</p>
+
+                <div class="construction" role="img"
+                    aria-label="Under Construction">
+                    <span>⚠ UNDER CONSTRUCTION ⚠</span>
+                </div>
+
+                <br>
+
+                <h1 style="color:#00ffff;text-shadow:2px 2px #ff00ff;">
+                    ~ My Cyber Home in Cyberspace ~
+                </h1>
+
+                <p class="blink">
+                    *** SITE BEST VIEWED IN NETSCAPE NAVIGATOR 4.0
+                    OR HIGHER AT 800x600 RESOLUTION ***
+                </p>
             </td>
         </tr>
 
-        <!-- Main Layout Area -->
         <tr>
-            <!-- Left Navigation Sidebar -->
             <td class="sidebar">
-                <h3 style="color: #FFFF00; text-decoration: underline;">Navigation</h3>
+                <h3 style="color:#ffff00;text-decoration:underline;">
+                    Navigation
+                </h3>
+
                 <p><a href="#about">About Me</a></p>
                 <p><a href="#interests">My Hobbies</a></p>
                 <p><a href="#links">Cool Links</a></p>
                 <p><a href="#guestbook">Sign Guestbook</a></p>
+
                 <br>
+
                 <center>
-                    <img src="https://archive.org" alt="IE Destroyed" width="88" height="31"><br><br>
-                    <img src="https://archive.org" alt="Netscape Now" width="88" height="31">
+                    <a class="badge neocities-badge"
+                       href="https://neocities.org/"
+                       target="_blank" rel="noopener noreferrer"
+                       aria-label="Visit Neocities">
+                        NEOCITIES<br>WEB HOME
+                    </a>
+
+                    <br><br>
+
+                    <a class="badge netscape-badge"
+                       href="https://archive.org/"
+                       target="_blank" rel="noopener noreferrer"
+                       aria-label="Explore the internet archive">
+                        NETSCAPE<br>NOW!
+                    </a>
                 </center>
             </td>
 
-            <!-- Right Content Area -->
             <td>
-                <h2 id="about" style="color: #FF00FF;">Who Am I?</h2>
-                <p>Hello weary web traveler! Welcome to my small corner of the information superhighway. I am a tech hobbyist, digital explorer, and fan of classic retro computing.</p>
-                
-                <hr size="4" color="#00FFFF">
+                <h2 id="about" style="color:#ff00ff;">Who Am I?</h2>
 
-                <h2 id="interests" style="color: #FF00FF;">My Top Interweb Interests</h2>
+                <p>
+                    Hello weary web traveler! Welcome to my small corner
+                    of the information superhighway. I am a tech hobbyist,
+                    digital explorer, and fan of classic retro computing.
+                </p>
+
+                <hr size="4" color="#00ffff">
+
+                <h2 id="interests" style="color:#ff00ff;">
+                    My Top Interweb Interests
+                </h2>
+
                 <ul>
-                    <li>Surfing the web late at night (when no one is using the phone line)</li>
+                    <li>Surfing the web late at night (when no one is
+                        using the phone line)</li>
                     <li>Collecting cool animated .GIF files</li>
                     <li>Listening to MIDI music files</li>
                 </ul>
 
-                <hr size="4" color="#FF0000">
+                <hr size="4" color="#ff0000">
 
-                <h2 id="links" style="color: #FF00FF;">Web Ring & Surf Spots</h2>
+                <h2 id="links" style="color:#ff00ff;">
+                    Web Ring &amp; Surf Spots
+                </h2>
+
                 <p>Check out these absolutely radical websites:</p>
-                <table border="1" bgcolor="#222222" style="border:1px solid #00FF00; width: 100%;">
+
+                <table border="1" bgcolor="#222222"
+                    style="border:1px solid #00ff00;width:100%;">
                     <tr>
                         <td><b>Site Name</b></td>
                         <td><b>Description</b></td>
                     </tr>
                     <tr>
-                        <td><a href="https://neocities.org" target="_blank">Neocities</a></td>
+                        <td>
+                            <a href="https://neocities.org/"
+                               target="_blank" rel="noopener noreferrer">
+                                Neocities
+                            </a>
+                        </td>
                         <td>The spiritual successor keeping the old web alive!</td>
                     </tr>
                     <tr>
-                        <td><a href="https://archive.org" target="_blank">The Wayback Machine</a></td>
+                        <td>
+                            <a href="https://archive.org/"
+                               target="_blank" rel="noopener noreferrer">
+                                The Wayback Machine
+                            </a>
+                        </td>
                         <td>Go back in time and view original digital artifacts.</td>
                     </tr>
                 </table>
 
-                <hr size="4" color="#FFFF00">
+                <hr size="4" color="#ffff00">
 
-                <h2 id="guestbook" style="color: #FF00FF;">Guestbook</h2>
-                <p>Don't leave without leaving a footprint! Type a message below to seal your visit in my guestbook database!</p>
-                <form action="#" onsubmit="alert('Error 404: CGI-BIN script not found on this server! Just kidding, this is a local demo template.'); return false;">
-                    Name: <input type="text" size="20" style="background-color: #333; color: #FFF; border: 1px solid #FFF;"><br><br>
-                    Message: <br>
-                    <textarea rows="4" cols="40" style="background-color: #333; color: #FFF; border: 1px solid #FFF;"></textarea><br><br>
+                <h2 id="guestbook" style="color:#ff00ff;">Guestbook</h2>
+
+                <p>
+                    Don't leave without leaving a footprint! Type a message
+                    below to seal your visit in my guestbook database!
+                </p>
+
+                <form onsubmit="alert('Demo only: no guestbook server is connected yet!'); return false;">
+                    <label for="guest-name">Name:</label><br>
+                    <input id="guest-name" name="name" type="text"
+                        size="20" maxlength="80"
+                        class="guestbook-input"
+                        required>
+
+                    <br><br>
+
+                    <label for="guest-message">Message:</label><br>
+                    <textarea id="guest-message" name="message"
+                        rows="4" cols="40" maxlength="1000"
+                        class="guestbook-input"
+                        required></textarea>
+
+                    <br><br>
+
                     <input type="submit" value="Submit Entry to Guestbook">
                 </form>
             </td>
         </tr>
 
-        <!-- Footer Area -->
         <tr>
-            <td colspan="2" style="text-align: center; border-top: 4px ridge #FF0000;">
+            <td colspan="2"
+                style="text-align:center;border-top:4px ridge #ff0000;">
                 <p>This web page was generated with old-school love.</p>
                 <p>YOU ARE VISITOR NUMBER:</p>
                 <p><span class="counter">001337</span></p>
-                <p><img src="https://archive.org" alt="Animated Fire Divider" style="width:100%; max-width:400px; height:15px;"></p>
+                <br>
                 <p>&copy; 1996-2026 CyberProductions Unlimited Inc.</p>
             </td>
         </tr>
@@ -163,3 +325,4 @@
 
 </body>
 </html>
+```
