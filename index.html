@@ -316,7 +316,48 @@
                 style="text-align:center;border-top:4px ridge #ff0000;">
                 <p>This web page was generated with old-school love.</p>
                 <p>YOU ARE VISITOR NUMBER:</p>
-                <p><span class="counter">001337</span></p>
+                <p>
+    <span class="counter" id="visitor-counter">------</span>
+</p>
+
+<script>
+(async function () {
+    const counter = document.getElementById("visitor-counter");
+
+    // Change this to a unique name for your website.
+    const namespace = "itdude207-cyber-home";
+    const key = "homepage";
+
+    try {
+        // Count once per browser tab session.
+        const sessionKey = "cyber-home-counted";
+
+        if (!sessionStorage.getItem(sessionKey)) {
+            await fetch(
+                `https://abacus.jasoncameron.dev/hit/${namespace}/${key}`,
+                { cache: "no-store" }
+            );
+
+            sessionStorage.setItem(sessionKey, "1");
+        }
+
+        // Read the total without incrementing it again.
+        const response = await fetch(
+            `https://abacus.jasoncameron.dev/get/${namespace}/${key}`,
+            { cache: "no-store" }
+        );
+
+        if (!response.ok) throw new Error("Counter unavailable");
+
+        const data = await response.json();
+
+        counter.textContent = String(data.value).padStart(6, "0");
+    } catch (error) {
+        counter.textContent = "------";
+        console.error("Visitor counter unavailable:", error);
+    }
+})();
+</script>
                 <br>
                 <p>&copy; 1996-2026 CyberProductions Unlimited Inc.</p>
             </td>
