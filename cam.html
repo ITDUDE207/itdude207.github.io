@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic AI Stream Management Dashboard</title>
+    <style>
+        body {
+            margin: 0; padding: 25px;
+            background-color: #0b0f19; color: #f1f5f9;
+            font-family: system-ui, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .dashboard { width: 100%; max-width: 1200px; }
+        h1 { color: #38bdf8; font-size: 1.75rem; margin-bottom: 20px; }
+        
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px; margin-top: 20px;
+        }
+        .cam-card {
+            background-color: #111827; border: 1px solid #1f2937;
+            border-radius: 12px; padding: 15px; overflow: hidden;
+        }
+        .cam-title { font-weight: 600; margin-bottom: 10px; color: #94a3b8; }
+        
+        .video-container {
+            position: relative; width: 100%; aspect-ratio: 16/9;
+            background-color: #000; border-radius: 8px; overflow: hidden;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Action Buttons */
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
+        button {
+            background-color: #0284c7; color: #fff; border: none;
+            padding: 8px 16px; border-radius: 6px; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+        button:hover { background-color: #0369a1; }
+        button.fetch-btn { background-color: #10b981; padding: 12px 24px; font-size: 1rem;}
+        button.fetch-btn:hover { background-color: #059669; }
+    </style>
+
+    <!-- Essential ultra-low latency WebRTC stream parsing library -->
+    <script type="module" src="https://unpkg.com"></script>
+</head>
+<body>
+
+    <div class="dashboard">
+        <h1>Automated Real-Time Camera Parser</h1>
+        <button class="fetch-btn" id="loadStreamsBtn">Query Directory API & Provision Streams</button>
+        
+        <!-- Live Video Feeds Injected Here -->
+        <div class="grid" id="cameraGrid"></div>
+    </div>
+
+    <script>
+        // Adjust endpoint targets to point to your streaming infrastructure
+        const LOCAL_GO2RTC_API = "http://localhost:1984/api/streams";
+        const LOCAL_GO2RTC_WS  = "ws://localhost:1984/api/ws";
+
+        document.getElementById('loadStreamsBtn').addEventListener('click', bootstrapCameraPipeline);
+
+        async function bootstrapCameraPipeline() {
+            const grid = document.getElementById('cameraGrid');
+            grid.innerHTML = ""; // Clear existing grid items
+
+            try {
+                // Step 1: Query the External Directory API to pull current online stream handles.
+                // Note: Replace with your actual directory endpoint/token payload structure.
+                const response = await fetch('https://rtsplink.com', {
+                    headers: { 'Authorization': 'Bearer YOUR_DEVELOPER_API_KEY' }
+                });
+                const cameraDataArray = await response.json();
+
+                // Fallback Mock Data matching actual public stream payloads if API is in sandbox mode
+                const targetFeeds = cameraDataArray.length ? cameraDataArray : [
+                    { id: "highway_east", label: "Public Traffic Cam 01", rtsp: "rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa" },
+                    { id: "pedestrian_junction", label: "City Pedestrian Flow", rtsp: "rtsp://://rtsplink.com" }
+                ];
+
+                for (const cam of targetFeeds) {
+                    // Step 2: Programmatically provision the stream inside the go2rtc server core
+                    const provisioned = await provisionStreamInBackend(cam.id, cam.rtsp);
+                    
+                    if (provisioned) {
+                        // Step 3: Draw the card element component container onto the graphical interface
+                        renderVisualCard(cam.id, cam.label);
+                    }
+                }
+            } catch (err) {
+                console.error("Pipeline failure:", err);
+                alert("Error connecting to stream allocation endpoint routers.");
+            }
+        }
+
+        // Programmatic pipeline hook to feed active targets into the Media Server
+        async function provisionStreamInBackend(id, rtspUrl) {
+            try {
+                // go2rtc API uses a PUT/POST command query to dynamically inject active sources
+                const res = await fetch(`${LOCAL_GO2RTC_API}?src=${encodeURIComponent(id)}&dst=${encodeURIComponent(rtspUrl)}`, {
+                    method: 'PUT'
+                });
+                return res.ok;
+            } catch (e) {
+                console.error(`Failed mapping stream resource ${id}:`, e);
+                return false;
+            }
+        }
+
+        // Render card layout grid components 
+        function renderVisualCard(id, label) {
+            const grid = document.getElementById('cameraGrid');
+            
+            const card = document.createElement('div');
+            card.className = 'cam-card';
+            
+            // Constructing explicit WebRTC dynamic source websocket targets
+            card.innerHTML = `
+                <div class="cam-title">${label} (${id})</div>
+                <div class="video-container">
+                    <video-stream src="${LOCAL_GO2RTC_WS}?src=${id}" autoplay muted></video-stream>
+                </div>
+                <div class="controls">
+                    <button onclick="forceSyncStream(this)">Reset Sync Lag</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        }
+
+        // Drop buffers instantly to ensure millisecond playback stability
+        window.forceSyncStream = function(buttonComponent) {
+            const wrapper = buttonComponent.closest('.cam-card');
+            const videoStreamElement = wrapper.querySelector('video-stream');
+            const internalVideoTag = videoStreamElement.shadowRoot?.querySelector('video');
+            
+            if (internalVideoTag && internalVideoTag.buffered.length > 0) {
+                internalVideoTag.currentTime = internalVideoTag.buffered.end(internalVideoTag.buffered.length - 1);
+            }
+        };
+    </script>
+</body>
+</html>
