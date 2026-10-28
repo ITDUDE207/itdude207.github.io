@@ -1,146 +1,413 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic AI Stream Management Dashboard</title>
-    <style>
-        body {
-            margin: 0; padding: 25px;
-            background-color: #0b0f19; color: #f1f5f9;
-            font-family: system-ui, sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .dashboard { width: 100%; max-width: 1200px; }
-        h1 { color: #38bdf8; font-size: 1.75rem; margin-bottom: 20px; }
-        
-        /* Grid Layout */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 20px; margin-top: 20px;
-        }
-        .cam-card {
-            background-color: #111827; border: 1px solid #1f2937;
-            border-radius: 12px; padding: 15px; overflow: hidden;
-        }
-        .cam-title { font-weight: 600; margin-bottom: 10px; color: #94a3b8; }
-        
-        .video-container {
-            position: relative; width: 100%; aspect-ratio: 16/9;
-            background-color: #000; border-radius: 8px; overflow: hidden;
-        }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Action Buttons */
-        .controls { margin-top: 15px; display: flex; gap: 10px; }
-        button {
-            background-color: #0284c7; color: #fff; border: none;
-            padding: 8px 16px; border-radius: 6px; font-weight: 600;
-            cursor: pointer; transition: background 0.2s;
-        }
-        button:hover { background-color: #0369a1; }
-        button.fetch-btn { background-color: #10b981; padding: 12px 24px; font-size: 1rem;}
-        button.fetch-btn:hover { background-color: #059669; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WORLD//CAM — Live Global CCTV</title>
 
-    <!-- Essential ultra-low latency WebRTC stream parsing library -->
-    <script type="module" src="https://unpkg.com"></script>
+<style>
+:root {
+    --bg: #080c10;
+    --panel: #101820;
+    --border: #253441;
+    --green: #55f5a5;
+    --muted: #91a2b1;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: #edf5fa;
+    font-family: system-ui, Arial, sans-serif;
+}
+
+header {
+    padding: 20px 24px;
+    background: #0d141b;
+    border-bottom: 1px solid var(--border);
+}
+
+.logo {
+    color: var(--green);
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+.subtitle {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 24px;
+}
+
+input, select, button {
+    padding: 10px 13px;
+    color: white;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+input {
+    flex: 1;
+    min-width: 180px;
+}
+
+button, select { cursor: pointer; }
+
+button:hover, select:hover {
+    border-color: var(--green);
+}
+
+.status {
+    padding: 0 24px 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 0 24px 24px;
+}
+
+.card {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px;
+}
+
+.camera-name {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.camera-location {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.live {
+    color: var(--green);
+    white-space: nowrap;
+    font-size: 10px;
+}
+
+.video {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+}
+
+.video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 11px;
+}
+
+.card-footer a {
+    color: var(--green);
+    font-size: 11px;
+    text-decoration: none;
+}
+
+.card-footer span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.empty {
+    grid-column: 1 / -1;
+    padding: 35px;
+    color: var(--muted);
+    text-align: center;
+}
+
+footer {
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    text-align: center;
+    font-size: 11px;
+}
+
+footer a { color: var(--green); }
+
+@media (max-width: 950px) {
+    .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 580px) {
+    header { padding: 18px; }
+    .toolbar { padding: 12px 16px; }
+    .status { padding: 0 16px 12px; }
+    .grid {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0 16px 20px;
+    }
+}
+</style>
 </head>
+
 <body>
-
-    <div class="dashboard">
-        <h1>Automated Real-Time Camera Parser</h1>
-        <button class="fetch-btn" id="loadStreamsBtn">Query Directory API & Provision Streams</button>
-        
-        <!-- Live Video Feeds Injected Here -->
-        <div class="grid" id="cameraGrid"></div>
+<header>
+    <div class="logo">WORLD//CAM</div>
+    <div class="subtitle">
+        GLOBAL LIVE VIDEO NETWORK · PUBLIC WEBCAMS
     </div>
+</header>
 
-    <script>
-        // Adjust endpoint targets to point to your streaming infrastructure
-        const LOCAL_GO2RTC_API = "http://localhost:1984/api/streams";
-        const LOCAL_GO2RTC_WS  = "ws://localhost:1984/api/ws";
+<div class="toolbar">
+    <input id="search" type="search"
+           placeholder="Search cameras or locations...">
 
-        document.getElementById('loadStreamsBtn').addEventListener('click', bootstrapCameraPipeline);
+    <select id="category" aria-label="Filter cameras">
+        <option value="all">All cameras</option>
+        <option value="city">Cities</option>
+        <option value="beach">Beaches</option>
+        <option value="nature">Nature</option>
+    </select>
 
-        async function bootstrapCameraPipeline() {
-            const grid = document.getElementById('cameraGrid');
-            grid.innerHTML = ""; // Clear existing grid items
+    <button id="reload">Reload feeds</button>
+</div>
 
-            try {
-                // Step 1: Query the External Directory API to pull current online stream handles.
-                // Note: Replace with your actual directory endpoint/token payload structure.
-                const response = await fetch('https://rtsplink.com', {
-                    headers: { 'Authorization': 'Bearer YOUR_DEVELOPER_API_KEY' }
-                });
-                const cameraDataArray = await response.json();
+<div class="status" id="status" aria-live="polite">
+    Initialising video feeds...
+</div>
 
-                // Fallback Mock Data matching actual public stream payloads if API is in sandbox mode
-                const targetFeeds = cameraDataArray.length ? cameraDataArray : [
-                    { id: "highway_east", label: "Public Traffic Cam 01", rtsp: "rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa" },
-                    { id: "pedestrian_junction", label: "City Pedestrian Flow", rtsp: "rtsp://://rtsplink.com" }
-                ];
+<main class="grid" id="grid"></main>
 
-                for (const cam of targetFeeds) {
-                    // Step 2: Programmatically provision the stream inside the go2rtc server core
-                    const provisioned = await provisionStreamInBackend(cam.id, cam.rtsp);
-                    
-                    if (provisioned) {
-                        // Step 3: Draw the card element component container onto the graphical interface
-                        renderVisualCard(cam.id, cam.label);
-                    }
-                }
-            } catch (err) {
-                console.error("Pipeline failure:", err);
-                alert("Error connecting to stream allocation endpoint routers.");
-            }
-        }
+<footer>
+    Video is streamed by YouTube and the original broadcasters.
+    <br><br>
+    <a href="https://livepublicwebcams.com/" target="_blank"
+       rel="noopener noreferrer">Live Public Webcams directory</a>
+    ·
+    <a href="https://opencam.live/" target="_blank"
+       rel="noopener noreferrer">Explore worldwide cameras</a>
+</footer>
 
-        // Programmatic pipeline hook to feed active targets into the Media Server
-        async function provisionStreamInBackend(id, rtspUrl) {
-            try {
-                // go2rtc API uses a PUT/POST command query to dynamically inject active sources
-                const res = await fetch(`${LOCAL_GO2RTC_API}?src=${encodeURIComponent(id)}&dst=${encodeURIComponent(rtspUrl)}`, {
-                    method: 'PUT'
-                });
-                return res.ok;
-            } catch (e) {
-                console.error(`Failed mapping stream resource ${id}:`, e);
-                return false;
-            }
-        }
+<script>
+const cameras = [
+    {
+        name: "Calgary Live Camera",
+        location: "Calgary, Canada",
+        category: "city",
+        id: "MwcqP3ta6RI"
+    },
+    {
+        name: "Canmore Main Street",
+        location: "Canmore, Canada",
+        category: "city",
+        id: "_0wPODlF9wU"
+    },
+    {
+        name: "Tallinn CityCam",
+        location: "Tallinn, Estonia",
+        category: "city",
+        id: "VhVgZi2lGv0"
+    },
+    {
+        name: "Santa Claus Village",
+        location: "Rovaniemi, Finland",
+        category: "city",
+        id: "Cp4RRAEgpeU"
+    },
+    {
+        name: "Cannes Harbour",
+        location: "Cannes, France",
+        category: "beach",
+        id: "LIJeUFbdhcg"
+    },
+    {
+        name: "Manarola Cinque Terre",
+        location: "Italy",
+        category: "beach",
+        id: "QpqsJKI0Wfk"
+    },
+    {
+        name: "Milan Skyline",
+        location: "Milan, Italy",
+        category: "city",
+        id: "dsoM6TYIkOI"
+    },
+    {
+        name: "Tokyo Shinjuku Crossing",
+        location: "Tokyo, Japan",
+        category: "city",
+        id: "6dp-bvQ7RWo"
+    },
+    {
+        name: "Amsterdam Dam Square",
+        location: "Amsterdam, Netherlands",
+        category: "city",
+        id: "Gd9d4q6WvUY"
+    }
+];
 
-        // Render card layout grid components 
-        function renderVisualCard(id, label) {
-            const grid = document.getElementById('cameraGrid');
-            
-            const card = document.createElement('div');
-            card.className = 'cam-card';
-            
-            // Constructing explicit WebRTC dynamic source websocket targets
-            card.innerHTML = `
-                <div class="cam-title">${label} (${id})</div>
-                <div class="video-container">
-                    <video-stream src="${LOCAL_GO2RTC_WS}?src=${id}" autoplay muted></video-stream>
-                </div>
-                <div class="controls">
-                    <button onclick="forceSyncStream(this)">Reset Sync Lag</button>
-                </div>
-            `;
-            grid.appendChild(card);
-        }
+const grid = document.getElementById("grid");
+const search = document.getElementById("search");
+const category = document.getElementById("category");
+const status = document.getElementById("status");
 
-        // Drop buffers instantly to ensure millisecond playback stability
-        window.forceSyncStream = function(buttonComponent) {
-            const wrapper = buttonComponent.closest('.cam-card');
-            const videoStreamElement = wrapper.querySelector('video-stream');
-            const internalVideoTag = videoStreamElement.shadowRoot?.querySelector('video');
-            
-            if (internalVideoTag && internalVideoTag.buffered.length > 0) {
-                internalVideoTag.currentTime = internalVideoTag.buffered.end(internalVideoTag.buffered.length - 1);
-            }
-        };
-    </script>
+let reloadVersion = 0;
+
+function makeCameraCard(camera) {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const heading = document.createElement("div");
+    heading.className = "card-header";
+
+    const info = document.createElement("div");
+
+    const name = document.createElement("div");
+    name.className = "camera-name";
+    name.textContent = camera.name;
+
+    const location = document.createElement("div");
+    location.className = "camera-location";
+    location.textContent = camera.location;
+
+    info.append(name, location);
+
+    const live = document.createElement("span");
+    live.className = "live";
+    live.textContent = "● LIVE FEED";
+
+    heading.append(info, live);
+
+    const video = document.createElement("div");
+    video.className = "video";
+
+    const iframe = document.createElement("iframe");
+    iframe.title = camera.name;
+    iframe.loading = "lazy";
+    iframe.allow = "autoplay; encrypted-media; picture-in-picture";
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+
+    iframe.src =
+        "https://www.youtube-nocookie.com/embed/" +
+        encodeURIComponent(camera.id) +
+        "?autoplay=1" +
+        "&mute=1" +
+        "&controls=0" +
+        "&disablekb=1" +
+        "&playsinline=1" +
+        "&rel=0" +
+        "&iv_load_policy=3" +
+        "&enablejsapi=0" +
+        "&playlist=" + encodeURIComponent(camera.id) +
+        "&loop=1" +
+        "&widget_referrer=" +
+        encodeURIComponent(location.href || "");
+
+    // The URL must not be assembled from user-provided input.
+    // All camera IDs above are hard-coded public video IDs.
+    video.appendChild(iframe);
+
+    const footer = document.createElement("div");
+    footer.className = "card-footer";
+
+    const note = document.createElement("span");
+    note.textContent = "Muted · Auto-play attempted";
+
+    const source = document.createElement("a");
+    source.href = "https://www.youtube.com/watch?v=" +
+        encodeURIComponent(camera.id);
+    source.target = "_blank";
+    source.rel = "noopener noreferrer";
+    source.textContent = "Open video ↗";
+
+    footer.append(note, source);
+    card.append(heading, video, footer);
+
+    return card;
+}
+
+function render() {
+    const query = search.value.trim().toLowerCase();
+    const selectedCategory = category.value;
+
+    const filtered = cameras.filter(camera => {
+        const matchesCategory =
+            selectedCategory === "all" ||
+            camera.category === selectedCategory;
+
+        const matchesSearch =
+            (camera.name + " " + camera.location)
+                .toLowerCase()
+                .includes(query);
+
+        return matchesCategory && matchesSearch;
+    });
+
+    grid.replaceChildren();
+
+    if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No cameras match your search.";
+        grid.appendChild(empty);
+    } else {
+        filtered.forEach(camera => {
+            grid.appendChild(makeCameraCard(camera));
+        });
+    }
+
+    status.textContent =
+        filtered.length + " video feeds displayed · Reload " +
+        reloadVersion +
+        " · Feeds may be offline or block embedding";
+}
+
+search.addEventListener("input", render);
+category.addEventListener("change", render);
+
+document.getElementById("reload").addEventListener("click", () => {
+    reloadVersion++;
+    render();
+});
+
+render();
+</script>
 </body>
 </html>
