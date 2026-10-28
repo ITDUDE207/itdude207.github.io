@@ -2,412 +2,303 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WORLD//CAM — Live Global CCTV</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Worldwide Live CCTV</title>
 
-<style>
-:root {
-    --bg: #080c10;
-    --panel: #101820;
-    --border: #253441;
-    --green: #55f5a5;
-    --muted: #91a2b1;
-}
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    background: var(--bg);
-    color: #edf5fa;
-    font-family: system-ui, Arial, sans-serif;
-}
-
-header {
-    padding: 20px 24px;
-    background: #0d141b;
-    border-bottom: 1px solid var(--border);
-}
-
-.logo {
-    color: var(--green);
-    font-size: 24px;
-    font-weight: 900;
-    letter-spacing: 3px;
-}
-
-.subtitle {
-    margin-top: 5px;
-    color: var(--muted);
-    font-size: 12px;
-    letter-spacing: 1px;
-}
-
-.toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 16px 24px;
-}
-
-input, select, button {
-    padding: 10px 13px;
-    color: white;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font: inherit;
-}
-
-input {
-    flex: 1;
-    min-width: 180px;
-}
-
-button, select { cursor: pointer; }
-
-button:hover, select:hover {
-    border-color: var(--green);
-}
-
-.status {
-    padding: 0 24px 12px;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    padding: 0 24px 24px;
-}
-
-.card {
-    min-width: 0;
-    overflow: hidden;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 11px;
-}
-
-.camera-name {
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.camera-location {
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 11px;
-}
-
-.live {
-    color: var(--green);
-    white-space: nowrap;
-    font-size: 10px;
-}
-
-.video {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    overflow: hidden;
-}
-
-.video iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-}
-
-.card-footer {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    align-items: center;
-    padding: 9px 11px;
-}
-
-.card-footer a {
-    color: var(--green);
-    font-size: 11px;
-    text-decoration: none;
-}
-
-.card-footer span {
-    color: var(--muted);
-    font-size: 10px;
-}
-
-.empty {
-    grid-column: 1 / -1;
-    padding: 35px;
-    color: var(--muted);
-    text-align: center;
-}
-
-footer {
-    padding: 20px;
-    border-top: 1px solid var(--border);
-    color: var(--muted);
-    text-align: center;
-    font-size: 11px;
-}
-
-footer a { color: var(--green); }
-
-@media (max-width: 950px) {
-    .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+  <style>
+    * {
+      box-sizing: border-box;
     }
-}
 
-@media (max-width: 580px) {
-    header { padding: 18px; }
-    .toolbar { padding: 12px 16px; }
-    .status { padding: 0 16px 12px; }
-    .grid {
-        grid-template-columns: minmax(0, 1fr);
-        padding: 0 16px 20px;
+    body {
+      margin: 0;
+      background: #090d12;
+      color: #e8edf2;
+      font-family: Arial, sans-serif;
     }
-}
-</style>
+
+    header {
+      padding: 20px;
+      background: #111923;
+      border-bottom: 1px solid #273443;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 23px;
+    }
+
+    header p {
+      margin: 0;
+      color: #9baaba;
+      font-size: 13px;
+    }
+
+    main {
+      padding: 16px;
+    }
+
+    .camera-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: 14px;
+    }
+
+    .camera-card {
+      min-width: 0;
+      overflow: hidden;
+      background: #121a24;
+      border: 1px solid #273443;
+      border-radius: 8px;
+    }
+
+    .camera-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .camera-title {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .camera-location {
+      margin-top: 4px;
+      color: #9baaba;
+      font-size: 12px;
+    }
+
+    .status {
+      color: #f0c674;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .status.live {
+      color: #60dc91;
+    }
+
+    .video-container {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+    }
+
+    video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #b7c3d0;
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .message.hidden {
+      display: none;
+    }
+
+    footer {
+      padding: 18px;
+      color: #8290a0;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 500px) {
+      main {
+        padding: 9px;
+      }
+
+      .camera-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
-<header>
-    <div class="logo">WORLD//CAM</div>
-    <div class="subtitle">
-        GLOBAL LIVE VIDEO NETWORK · PUBLIC WEBCAMS
-    </div>
-</header>
+  <header>
+    <h1>Worldwide Live CCTV</h1>
+    <p>Public live streams · Automatic grid · No video controls</p>
+  </header>
 
-<div class="toolbar">
-    <input id="search" type="search"
-           placeholder="Search cameras or locations...">
+  <main>
+    <div class="camera-grid" id="cameraGrid"></div>
+  </main>
 
-    <select id="category" aria-label="Filter cameras">
-        <option value="all">All cameras</option>
-        <option value="city">Cities</option>
-        <option value="beach">Beaches</option>
-        <option value="nature">Nature</option>
-    </select>
+  <footer>
+    Streams may be delayed, offline, or restricted by their providers.
+  </footer>
 
-    <button id="reload">Reload feeds</button>
-</div>
+  <script>
+    /*
+    ==========================================================
+    ADD CAMERAS HERE
+    ==========================================================
 
-<div class="status" id="status" aria-live="polite">
-    Initialising video feeds...
-</div>
+    To add a camera:
+    1. Copy one complete camera block below.
+    2. Paste it underneath the existing block.
+    3. Change name, location and url.
 
-<main class="grid" id="grid"></main>
+    The URL should be a direct, browser-accessible HLS stream,
+    usually ending in .m3u8.
 
-<footer>
-    Video is streamed by YouTube and the original broadcasters.
-    <br><br>
-    <a href="https://livepublicwebcams.com/" target="_blank"
-       rel="noopener noreferrer">Live Public Webcams directory</a>
-    ·
-    <a href="https://opencam.live/" target="_blank"
-       rel="noopener noreferrer">Explore worldwide cameras</a>
-</footer>
+    Remember to include a comma between camera blocks.
+    ==========================================================
+    */
 
-<script>
-const cameras = [
-    {
-        name: "Calgary Live Camera",
-        location: "Calgary, Canada",
-        category: "city",
-        id: "MwcqP3ta6RI"
-    },
-    {
-        name: "Canmore Main Street",
-        location: "Canmore, Canada",
-        category: "city",
-        id: "_0wPODlF9wU"
-    },
-    {
-        name: "Tallinn CityCam",
-        location: "Tallinn, Estonia",
-        category: "city",
-        id: "VhVgZi2lGv0"
-    },
-    {
-        name: "Santa Claus Village",
-        location: "Rovaniemi, Finland",
-        category: "city",
-        id: "Cp4RRAEgpeU"
-    },
-    {
-        name: "Cannes Harbour",
-        location: "Cannes, France",
-        category: "beach",
-        id: "LIJeUFbdhcg"
-    },
-    {
-        name: "Manarola Cinque Terre",
-        location: "Italy",
-        category: "beach",
-        id: "QpqsJKI0Wfk"
-    },
-    {
-        name: "Milan Skyline",
-        location: "Milan, Italy",
-        category: "city",
-        id: "dsoM6TYIkOI"
-    },
-    {
-        name: "Tokyo Shinjuku Crossing",
-        location: "Tokyo, Japan",
-        category: "city",
-        id: "6dp-bvQ7RWo"
-    },
-    {
-        name: "Amsterdam Dam Square",
-        location: "Amsterdam, Netherlands",
-        category: "city",
-        id: "Gd9d4q6WvUY"
-    }
-];
+    const cameras = [
 
-const grid = document.getElementById("grid");
-const search = document.getElementById("search");
-const category = document.getElementById("category");
-const status = document.getElementById("status");
+      // CAMERA 1 — MINNESOTA, USA
+      {
+        name: "Minnesota Traffic Camera",
+        location: "Minnesota, United States",
+        url: "https://video.dot.state.mn.us/public/C75-02.stream/playlist.m3u8"
+      },
 
-let reloadVersion = 0;
+      // COPY THIS BLOCK TO ADD ANOTHER CAMERA
+      // Replace the example details with a real stream URL.
+      /*
+      {
+        name: "Your New Camera",
+        location: "London, United Kingdom",
+        url: "https://example.com/live/playlist.m3u8"
+      },
+      */
 
-function makeCameraCard(camera) {
-    const card = document.createElement("article");
-    card.className = "card";
+      // PASTE MORE CAMERA BLOCKS HERE
 
-    const heading = document.createElement("div");
-    heading.className = "card-header";
+    ];
 
-    const info = document.createElement("div");
+    const grid = document.getElementById("cameraGrid");
 
-    const name = document.createElement("div");
-    name.className = "camera-name";
-    name.textContent = camera.name;
+    function createCamera(camera) {
+      const card = document.createElement("section");
+      card.className = "camera-card";
 
-    const location = document.createElement("div");
-    location.className = "camera-location";
-    location.textContent = camera.location;
+      const heading = document.createElement("div");
+      heading.className = "camera-heading";
 
-    info.append(name, location);
+      const details = document.createElement("div");
 
-    const live = document.createElement("span");
-    live.className = "live";
-    live.textContent = "● LIVE FEED";
+      const title = document.createElement("div");
+      title.className = "camera-title";
+      title.textContent = camera.name;
 
-    heading.append(info, live);
+      const location = document.createElement("div");
+      location.className = "camera-location";
+      location.textContent = camera.location;
 
-    const video = document.createElement("div");
-    video.className = "video";
+      details.append(title, location);
 
-    const iframe = document.createElement("iframe");
-    iframe.title = camera.name;
-    iframe.loading = "lazy";
-    iframe.allow = "autoplay; encrypted-media; picture-in-picture";
-    iframe.allowFullscreen = true;
-    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+      const status = document.createElement("span");
+      status.className = "status";
+      status.textContent = "CONNECTING";
 
-    iframe.src =
-        "https://www.youtube-nocookie.com/embed/" +
-        encodeURIComponent(camera.id) +
-        "?autoplay=1" +
-        "&mute=1" +
-        "&controls=0" +
-        "&disablekb=1" +
-        "&playsinline=1" +
-        "&rel=0" +
-        "&iv_load_policy=3" +
-        "&enablejsapi=0" +
-        "&playlist=" + encodeURIComponent(camera.id) +
-        "&loop=1" +
-        "&widget_referrer=" +
-        encodeURIComponent(location.href || "");
+      heading.append(details, status);
 
-    // The URL must not be assembled from user-provided input.
-    // All camera IDs above are hard-coded public video IDs.
-    video.appendChild(iframe);
+      const container = document.createElement("div");
+      container.className = "video-container";
 
-    const footer = document.createElement("div");
-    footer.className = "card-footer";
+      const video = document.createElement("video");
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.controls = false;
+      video.setAttribute("aria-label", camera.name);
 
-    const note = document.createElement("span");
-    note.textContent = "Muted · Auto-play attempted";
+      const message = document.createElement("div");
+      message.className = "message";
+      message.textContent = "Connecting to stream…";
 
-    const source = document.createElement("a");
-    source.href = "https://www.youtube.com/watch?v=" +
-        encodeURIComponent(camera.id);
-    source.target = "_blank";
-    source.rel = "noopener noreferrer";
-    source.textContent = "Open video ↗";
+      container.append(video, message);
+      card.append(heading, container);
+      grid.append(card);
 
-    footer.append(note, source);
-    card.append(heading, video, footer);
+      function showMessage(text) {
+        message.textContent = text;
+        message.classList.remove("hidden");
+      }
 
-    return card;
-}
+      function markPlaying() {
+        status.textContent = "PLAYING";
+        status.classList.add("live");
+        message.classList.add("hidden");
+      }
 
-function render() {
-    const query = search.value.trim().toLowerCase();
-    const selectedCategory = category.value;
+      video.addEventListener("playing", markPlaying);
 
-    const filtered = cameras.filter(camera => {
-        const matchesCategory =
-            selectedCategory === "all" ||
-            camera.category === selectedCategory;
+      video.addEventListener("waiting", () => {
+        status.textContent = "BUFFERING";
+        status.classList.remove("live");
+      });
 
-        const matchesSearch =
-            (camera.name + " " + camera.location)
-                .toLowerCase()
-                .includes(query);
+      video.addEventListener("error", () => {
+        status.textContent = "ERROR";
+        status.classList.remove("live");
+        showMessage("Video failed to load. The stream may be offline or unsupported.");
+      });
 
-        return matchesCategory && matchesSearch;
-    });
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = camera.url;
 
-    grid.replaceChildren();
-
-    if (filtered.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "empty";
-        empty.textContent = "No cameras match your search.";
-        grid.appendChild(empty);
-    } else {
-        filtered.forEach(camera => {
-            grid.appendChild(makeCameraCard(camera));
+        video.play().catch(() => {
+          showMessage("Waiting for the video stream…");
         });
+
+      } else if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 30
+        });
+
+        hls.loadSource(camera.url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {
+            showMessage("Playback was blocked by the browser.");
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            status.textContent = "UNAVAILABLE";
+            status.classList.remove("live");
+            showMessage(
+              "Could not load this stream. It may be offline or block browser access."
+            );
+            hls.destroy();
+          }
+        });
+
+      } else {
+        status.textContent = "UNSUPPORTED";
+        showMessage("This browser does not support HLS playback.");
+      }
     }
 
-    status.textContent =
-        filtered.length + " video feeds displayed · Reload " +
-        reloadVersion +
-        " · Feeds may be offline or block embedding";
-}
-
-search.addEventListener("input", render);
-category.addEventListener("change", render);
-
-document.getElementById("reload").addEventListener("click", () => {
-    reloadVersion++;
-    render();
-});
-
-render();
-</script>
+    cameras.forEach(createCamera);
+  </script>
 </body>
 </html>
