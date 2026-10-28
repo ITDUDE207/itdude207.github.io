@@ -218,8 +218,15 @@
         name: "Düsseldorf Airport — airfield camera",
         location: "Düsseldorf Airport",
         url: "https://stream-5gw.1000eyes.de/cupertino/dused0c.stream/chunklist.m3u8",
-        
+
       }
+       {
+        type: "image",
+        name: "Aus Satelite",
+        location: "Australia",
+        url: "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2026-10-26&BBOX=-50,110,0,180&CRS=EPSG:4326&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor,Coastlines_15m&FORMAT=image/jpeg&WIDTH=1200&HEIGHT=800",
+        refreshSeconds: 10
+      },
       // ADD MORE CAMERAS HERE.
       // For an image, use type: "image".
       // For a video, use type: "hls".
