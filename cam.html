@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Worldwide Live CCTV</title>
 
-  <!-- HLS playback for Chrome and Edge -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 
   <style>
@@ -44,8 +43,7 @@
 
     .camera-grid {
       display: grid;
-      grid-template-columns:
-        repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
       gap: 14px;
     }
 
@@ -93,11 +91,13 @@
 
     .video-container {
       position: relative;
+      width: 100%;
       aspect-ratio: 16 / 9;
       background: #000;
     }
 
-    video {
+    video,
+    .camera-image {
       display: block;
       width: 100%;
       height: 100%;
@@ -154,7 +154,8 @@
   </main>
 
   <footer>
-    Streams may be delayed, offline, or restricted by their providers.
+    Video streams may be delayed or unavailable.
+    Snapshot cameras refresh automatically when supported by their provider.
   </footer>
 
   <script>
@@ -163,40 +164,54 @@
     ADD CAMERAS HERE
     ==========================================================
 
-    Copy a camera block, paste it into the list, and change
-    its name, location and URL.
+    VIDEO CAMERA:
+      type: "hls"
+      url: "https://example.com/playlist.m3u8"
 
-    Use a direct HLS stream URL, usually ending in .m3u8.
-    Keep a comma between camera blocks.
+    IMAGE/SNAPSHOT CAMERA:
+      type: "image"
+      url: "https://example.com/camera.jpeg"
+      refreshSeconds: 10
+
+    Copy a camera block and change its details.
+    Add a comma between camera blocks.
     ==========================================================
     */
 
     const cameras = [
       {
+        type: "hls",
         name: "Minnesota Traffic Camera",
         location: "Minnesota, United States",
         url: "https://video.dot.state.mn.us/public/C75-02.stream/playlist.m3u8"
       },
 
       {
+        type: "hls",
         name: "I 95 @ SOUTH OF DE 141",
         location: "New Castle County, Delaware, United States",
         url: "https://video.deldot.gov/live/NCAM008.stream/playlist.m3u8"
       },
 
       {
+        type: "hls",
         name: "I-94 WB @ Co Rd 21 (Stagecoach Trl)",
         location: "1 mile west of Lakeland, Minnesota, United States",
         url: "https://video.dot.state.mn.us/public/C868.stream/playlist.m3u8"
+      },
+
+      // CAMERA 4 — TAMWORTH, AUSTRALIA
+      {
+        type: "image",
+        name: "Brisbane Street",
+        location: "Tamworth, New South Wales, Australia",
+        url: "https://webcams.transport.nsw.gov.au/livetraffic-webcams/cameras/brisbane_street_tamworth.jpeg",
+        refreshSeconds: 10
       }
 
-      // ADD MORE CAMERAS HERE:
-      // ,
-      // {
-      //   name: "London Traffic Camera",
-      //   location: "London, United Kingdom",
-      //   url: "https://example.com/live/playlist.m3u8"
-      // }
+      // ADD MORE CAMERAS HERE.
+      // For an image, use type: "image".
+      // For a video, use type: "hls".
     ];
 
     const grid = document.getElementById("cameraGrid");
@@ -222,13 +237,71 @@
 
       const status = document.createElement("span");
       status.className = "status";
-      status.textContent = "WAITING";
+      status.textContent = "CONNECTING";
 
       heading.append(details, status);
 
       const container = document.createElement("div");
       container.className = "video-container";
 
+      const message = document.createElement("div");
+      message.className = "message";
+      message.textContent = "Connecting…";
+
+      container.append(message);
+      card.append(heading, container);
+      grid.append(card);
+
+      function setStatus(text, type = "") {
+        status.textContent = text;
+        status.className = "status";
+
+        if (type) status.classList.add(type);
+      }
+
+      function showMessage(text) {
+        message.textContent = text;
+        message.classList.remove("hidden");
+      }
+
+      // IMAGE CAMERA
+      if (camera.type === "image") {
+        const image = document.createElement("img");
+        image.className = "camera-image";
+        image.alt = camera.name;
+        image.loading = "eager";
+        image.decoding = "async";
+
+        let hasLoaded = false;
+
+        image.addEventListener("load", () => {
+          hasLoaded = true;
+          setStatus("LIVE SNAPSHOT", "live");
+          message.classList.add("hidden");
+        });
+
+        image.addEventListener("error", () => {
+          setStatus("ERROR", "error");
+          showMessage("Snapshot unavailable. The image may be offline or blocked.");
+        });
+
+        container.insertBefore(image, message);
+
+        function refreshImage() {
+          // Cache-busting query parameter requests a fresh snapshot.
+          const separator = camera.url.includes("?") ? "&" : "?";
+          image.src = camera.url + separator + "_=" + Date.now();
+        }
+
+        refreshImage();
+
+        const seconds = Math.max(5, Number(camera.refreshSeconds) || 10);
+        setInterval(refreshImage, seconds * 1000);
+
+        return;
+      }
+
+      // HLS VIDEO CAMERA
       const video = document.createElement("video");
       video.autoplay = true;
       video.muted = true;
@@ -237,51 +310,18 @@
       video.preload = "auto";
       video.setAttribute("aria-label", camera.name);
 
-      const message = document.createElement("div");
-      message.className = "message";
-      message.textContent = "Waiting to connect…";
-
-      container.append(video, message);
-      card.append(heading, container);
-      grid.append(card);
+      container.insertBefore(video, message);
 
       let hls = null;
       let retryCount = 0;
       let recoveryUsed = false;
       let failed = false;
-      let retryTimer = null;
-
-      function setStatus(text, type = "") {
-        status.textContent = text;
-        status.className = "status";
-
-        if (type) {
-          status.classList.add(type);
-        }
-      }
-
-      function showMessage(text) {
-        message.textContent = text;
-        message.classList.remove("hidden");
-      }
 
       function showError(text) {
         failed = true;
         setStatus("ERROR", "error");
         showMessage(text);
         console.error(`[${camera.name}] ${text}`);
-      }
-
-      function cleanup() {
-        if (retryTimer !== null) {
-          clearTimeout(retryTimer);
-          retryTimer = null;
-        }
-
-        if (hls) {
-          hls.destroy();
-          hls = null;
-        }
       }
 
       video.addEventListener("playing", () => {
@@ -292,25 +332,20 @@
       });
 
       video.addEventListener("waiting", () => {
-        if (!failed) {
-          setStatus("BUFFERING");
-        }
+        if (!failed) setStatus("BUFFERING");
       });
 
       video.addEventListener("error", () => {
         if (!failed) {
-          showError(
-            "Browser playback error. Check the stream URL and Network tab."
-          );
+          showError("Browser playback error. Check the stream URL and server response.");
         }
       });
 
       if (!camera.url || !/^https?:\/\//i.test(camera.url)) {
-        showError("This camera needs a valid stream URL.");
+        showError("Invalid camera URL.");
         return;
       }
 
-      // Use native HLS support where available.
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = camera.url;
 
@@ -322,11 +357,10 @@
       }
 
       if (!window.Hls || !Hls.isSupported()) {
-        showError("This browser does not support HLS playback.");
+        showError("HLS playback is not supported in this browser.");
         return;
       }
 
-      // A completely separate HLS player for each camera.
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -355,11 +389,8 @@
           data
         );
 
-        if (!data.fatal || failed || !hls) {
-          return;
-        }
+        if (!data.fatal || failed || !hls) return;
 
-        // Retry fatal network failures a maximum of twice.
         if (
           data.type === Hls.ErrorTypes.NETWORK_ERROR &&
           retryCount < 2
@@ -368,22 +399,13 @@
           setStatus(`RETRY ${retryCount}/2`);
           showMessage("Connection failed. Retrying…");
 
-          if (retryTimer !== null) {
-            clearTimeout(retryTimer);
-          }
-
-          retryTimer = setTimeout(() => {
-            retryTimer = null;
-
-            if (hls && !failed) {
-              hls.startLoad();
-            }
+          setTimeout(() => {
+            if (hls && !failed) hls.startLoad();
           }, 1500 * retryCount);
 
           return;
         }
 
-        // Attempt media recovery once.
         if (
           data.type === Hls.ErrorTypes.MEDIA_ERROR &&
           !recoveryUsed
@@ -395,14 +417,16 @@
           return;
         }
 
-        const reason = data.details || data.type || "Unknown HLS error";
+        showError(
+          "Stream failed: " +
+          (data.details || data.type || "Unknown HLS error")
+        );
 
-        showError(`Stream failed: ${reason}`);
-        cleanup();
+        hls.destroy();
+        hls = null;
       });
 
-      // Stagger initial connections slightly to avoid starting
-      // every playlist request at exactly the same time.
+      // Stagger startup slightly; each camera still has its own player.
       setTimeout(() => {
         if (hls) {
           setStatus("CONNECTING");
