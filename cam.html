@@ -351,10 +351,7 @@
         image.loading = "eager";
         image.decoding = "async";
 
-        let hasLoaded = false;
-
         image.addEventListener("load", () => {
-          hasLoaded = true;
           setStatus("LIVE SNAPSHOT", "live");
           message.classList.add("hidden");
         });
@@ -367,7 +364,6 @@
         container.insertBefore(image, message);
 
         function refreshImage() {
-          // Cache-busting query parameter requests a fresh snapshot.
           const separator = camera.url.includes("?") ? "&" : "?";
           image.src = camera.url + separator + "_=" + Date.now();
         }
@@ -376,6 +372,47 @@
 
         const seconds = Math.max(5, Number(camera.refreshSeconds) || 10);
         setInterval(refreshImage, seconds * 1000);
+
+        return;
+      }
+
+      // DIRECT MP4 CAMERA
+      if (camera.type === "mp4") {
+        if (!camera.url || !/^https?:\/\//i.test(camera.url)) {
+          setStatus("ERROR", "error");
+          showMessage("Invalid camera URL.");
+          return;
+        }
+
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.controls = false;
+        video.preload = "auto";
+        video.setAttribute("aria-label", camera.name);
+
+        container.insertBefore(video, message);
+
+        video.addEventListener("playing", () => {
+          setStatus("PLAYING", "live");
+          message.classList.add("hidden");
+        });
+
+        video.addEventListener("waiting", () => {
+          setStatus("BUFFERING");
+        });
+
+        video.addEventListener("error", () => {
+          setStatus("ERROR", "error");
+          showMessage("Video unavailable. This stream may be offline or blocked.");
+        });
+
+        video.src = camera.url;
+        video.play().catch(() => {
+          setStatus("ERROR", "error");
+          showMessage("Direct video playback failed. The stream may be unavailable.");
+        });
 
         return;
       }
@@ -400,7 +437,7 @@
         failed = true;
         setStatus("ERROR", "error");
         showMessage(text);
-        console.error([${camera.name}] ${text});
+        console.error(`${camera.name}: ${text}`);
       }
 
       video.addEventListener("playing", () => {
@@ -461,12 +498,7 @@
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error(
-          [${camera.name}] HLS error:,
-          data.type,
-          data.details,
-          data
-        );
+        console.error(`${camera.name} HLS error:`, data.type, data.details, data);
 
         if (!data.fatal || failed || !hls) return;
 
@@ -475,7 +507,7 @@
           retryCount < 2
         ) {
           retryCount++;
-          setStatus(RETRY ${retryCount}/2);
+          setStatus(`RETRY ${retryCount}/2`);
           showMessage("Connection failed. Retrying…");
 
           setTimeout(() => {
