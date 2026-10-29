@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d12">
   <title>Worldwide Live CCTV</title>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
@@ -41,6 +42,32 @@
       padding: 16px;
     }
 
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      color: #9baaba;
+      font-size: 12px;
+    }
+
+    .toolbar button,
+    .camera-actions button {
+      border: 1px solid #354658;
+      border-radius: 5px;
+      padding: 7px 10px;
+      background: #182330;
+      color: #e8edf2;
+      cursor: pointer;
+    }
+
+    .toolbar button:hover,
+    .camera-actions button:hover {
+      background: #243447;
+    }
+
     .camera-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
@@ -66,6 +93,7 @@
     .camera-title {
       font-weight: bold;
       font-size: 14px;
+      overflow-wrap: anywhere;
     }
 
     .camera-location {
@@ -77,7 +105,7 @@
     .status {
       flex-shrink: 0;
       color: #f0c674;
-      font-size: 11px;
+      font-size: 10px;
       white-space: nowrap;
     }
 
@@ -94,15 +122,18 @@
       width: 100%;
       aspect-ratio: 16 / 9;
       background: #000;
+      overflow: hidden;
     }
 
     video,
-    .camera-image {
+    .camera-image,
+    .camera-mjpeg {
       display: block;
       width: 100%;
       height: 100%;
       object-fit: contain;
       background: #000;
+      border: 0;
     }
 
     .message {
@@ -118,17 +149,35 @@
       overflow-wrap: anywhere;
       text-align: center;
       pointer-events: none;
+      background: rgba(0, 0, 0, 0.35);
     }
 
     .message.hidden {
       display: none;
     }
 
+    .camera-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px 10px;
+      border-top: 1px solid #273443;
+    }
+
+    .camera-actions button {
+      font-size: 11px;
+    }
+
     footer {
       padding: 18px;
       color: #8290a0;
       font-size: 12px;
+      line-height: 1.6;
       text-align: center;
+    }
+
+    footer a {
+      color: #8dc7ff;
     }
 
     @media (max-width: 500px) {
@@ -138,6 +187,10 @@
 
       .camera-grid {
         grid-template-columns: 1fr;
+      }
+
+      header {
+        padding: 16px;
       }
     }
   </style>
@@ -150,13 +203,20 @@
   </header>
 
   <main>
+    <div class="toolbar">
+      <span id="cameraCount">Loading cameras…</span>
+      <button id="reloadAll" type="button">Reconnect all cameras</button>
+    </div>
+
     <div class="camera-grid" id="cameraGrid"></div>
   </main>
 
   <footer>
-    Video streams may be delayed or unavailable.
+    Video streams may be delayed or unavailable. Some providers block playback
+    on other websites or restrict access by region.
     Snapshot cameras refresh automatically when supported by their provider.
-    If it is not loading, try refreshing your page: <a href='cam.html'>Refresh</a>
+    <br>
+    <a href="cam.html">Open camera page</a>
   </footer>
 
   <script>
@@ -165,18 +225,26 @@
     ADD CAMERAS HERE
     ==========================================================
 
-    VIDEO CAMERA:
+    HLS VIDEO:
       type: "hls"
       url: "https://example.com/playlist.m3u8"
 
-    IMAGE/SNAPSHOT CAMERA:
+    MP4 VIDEO:
+      type: "mp4"
+      url: "https://example.com/camera.mp4"
+
+    MJPEG VIDEO:
+      type: "mjpeg"
+      url: "https://example.com/camera.mjpg"
+
+    SNAPSHOT IMAGE:
       type: "image"
       url: "https://example.com/camera.jpeg"
       refreshSeconds: 10
 
-    Copy a camera block and change its details.
-    Add a comma between camera blocks.
-    get the feeds from https://opencctv.org/
+    Note:
+    MJPEG must be a genuine continuous MJPEG endpoint.
+    A JPEG snapshot URL is not an MJPEG stream.
     ==========================================================
     */
 
@@ -193,19 +261,19 @@
         location: "Wilmington, Delaware, United States",
         url: "https://video.deldot.gov/live/NCAM154.stream/playlist.m3u8"
       },
-       {
+      {
         type: "hls",
         name: "T.H.75 NB @ 12th Ave",
-        location: "in Moorhead, Minnesota, United States",
+        location: "Moorhead, Minnesota, United States",
         url: "https://video.dot.state.mn.us/public/C75-06.stream/playlist.m3u8"
       },
       {
         type: "hls",
         name: "I-35W SB S of 106th St",
-        location: "in Bloomington, Minnesota, United States",
+        location: "Bloomington, Minnesota, United States",
         url: "https://video.dot.state.mn.us/public/C610.stream/playlist.m3u8"
       },
-    {
+      {
         type: "mp4",
         name: "Rotherhithe Tunnel Barrier N",
         location: "London, England, United Kingdom",
@@ -213,19 +281,16 @@
       },
       {
         type: "hls",
-        name: "I 95 @ SOUTH OF DE 141",
+        name: "I-95 South of DE 141",
         location: "New Castle County, Delaware, United States",
         url: "https://video.deldot.gov/live/NCAM008.stream/playlist.m3u8"
       },
-
       {
         type: "hls",
         name: "I-94 WB @ Co Rd 21 (Stagecoach Trl)",
         location: "1 mile west of Lakeland, Minnesota, United States",
         url: "https://video.dot.state.mn.us/public/C868.stream/playlist.m3u8"
       },
-
-      // CAMERA 4 — TAMWORTH, AUSTRALIA
       {
         type: "image",
         name: "Brisbane Street",
@@ -235,66 +300,59 @@
       },
       {
         type: "hls",
-        name: "Düsseldorf Airport — airfield camera",
-        location: "Düsseldorf Airport",
-        url: "https://stream-5gw.1000eyes.de/cupertino/dused0c.stream/chunklist.m3u8",
-
+        name: "Düsseldorf Airport — Airfield Camera",
+        location: "Düsseldorf, Germany",
+        url: "https://stream-5gw.1000eyes.de/cupertino/dused0c.stream/chunklist.m3u8"
       },
-       {
+      {
         type: "mp4",
-        name: "Edgeware Rd/Madia Ave",
+        name: "Edgware Rd / Madia Ave",
         location: "London, England, United Kingdom",
-        url: "https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.08861.mp4",
-        
+        url: "https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.08861.mp4"
       },
       {
         type: "hls",
-        name: "I-5 : (116) Brookhurst Street",
+        name: "I-5 (116) Brookhurst Street",
         location: "Orange, California, United States",
-        url: "https://wzmedia.dot.ca.gov/D12/NB5Brookhurst.stream/playlist.m3u8",
-
+        url: "https://wzmedia.dot.ca.gov/D12/NB5Brookhurst.stream/playlist.m3u8"
       },
       {
         type: "hls",
         name: "Hamburg Airport Runway Activity",
-        location: "Hamburg, Hamburg, Germany",
-        url: "https://stream-5gw.1000eyes.de/cupertino/hamDDFB28.stream/playlist.m3u8",
-
+        location: "Hamburg, Germany",
+        url: "https://stream-5gw.1000eyes.de/cupertino/hamDDFB28.stream/playlist.m3u8"
       },
       {
         type: "hls",
         name: "Fa’a’ā International Airport Webcam",
         location: "Faʻaʻā, French Polynesia",
-        url: "https://s40.ipcamlive.com/streams/283gqcojyeifda6sl/stream.m3u8",
-
+        url: "https://s40.ipcamlive.com/streams/283gqcojyeifda6sl/stream.m3u8"
       },
       {
         type: "hls",
         name: "Düsseldorf Airport Runway Action",
         location: "Düsseldorf, North Rhine-Westphalia, Germany",
-        url: "https://stream-5gw.1000eyes.de/cupertino/dus5abb.stream/playlist.m3u8",
-
+        url: "https://stream-5gw.1000eyes.de/cupertino/dus5abb.stream/playlist.m3u8"
       },
       {
         type: "hls",
         name: "Düsseldorf Airport Runway Action 2",
         location: "Düsseldorf, North Rhine-Westphalia, Germany",
-        url: "https://stream-5gw.1000eyes.de/cupertino/dusfcae.stream/playlist.m3u8",
-
+        url: "https://stream-5gw.1000eyes.de/cupertino/dusfcae.stream/playlist.m3u8"
       },
       {
         type: "hls",
         name: "NY27 at Sandy Hollow Road (CR52)",
         location: "Calverton, New York, United States",
-        url: "https://s7.nysdot.skyvdn.com/rtplive/R10_383/playlist.m3u8",
+        url: "https://s7.nysdot.skyvdn.com/rtplive/R10_383/playlist.m3u8"
+      }
 
-      },
-      // ADD MORE CAMERAS HERE.
-      // For an image, use type: "image".
-      // For a video, use type: "hls".
+      // Add more camera objects here, separated by commas.
     ];
 
     const grid = document.getElementById("cameraGrid");
+    const cameraCount = document.getElementById("cameraCount");
+    const players = [];
 
     function createCamera(camera, index) {
       const card = document.createElement("section");
@@ -307,11 +365,11 @@
 
       const title = document.createElement("div");
       title.className = "camera-title";
-      title.textContent = camera.name;
+      title.textContent = camera.name || "Unnamed camera";
 
       const location = document.createElement("div");
       location.className = "camera-location";
-      location.textContent = camera.location;
+      location.textContent = camera.location || "Location unknown";
 
       details.append(title, location);
 
@@ -329,13 +387,36 @@
       message.textContent = "Connecting…";
 
       container.append(message);
-      card.append(heading, container);
+
+      const actions = document.createElement("div");
+      actions.className = "camera-actions";
+
+      const reconnectButton = document.createElement("button");
+      reconnectButton.type = "button";
+      reconnectButton.textContent = "Reconnect";
+
+      const openButton = document.createElement("button");
+      openButton.type = "button";
+      openButton.textContent = "Open source";
+      openButton.addEventListener("click", () => {
+        window.open(camera.url, "_blank", "noopener,noreferrer");
+      });
+
+      actions.append(reconnectButton, openButton);
+      card.append(heading, container, actions);
       grid.append(card);
+
+      let hls = null;
+      let media = null;
+      let refreshTimer = null;
+      let retryTimer = null;
+      let reconnectAttempts = 0;
+      let destroyed = false;
+      let generation = 0;
 
       function setStatus(text, type = "") {
         status.textContent = text;
         status.className = "status";
-
         if (type) status.classList.add(type);
       }
 
@@ -344,178 +425,344 @@
         message.classList.remove("hidden");
       }
 
-      // IMAGE CAMERA
-      if (camera.type === "image") {
+      function hideMessage() {
+        message.classList.add("hidden");
+      }
+
+      function clearTimers() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        if (retryTimer) clearTimeout(retryTimer);
+        refreshTimer = null;
+        retryTimer = null;
+      }
+
+      function destroyPlayer() {
+        generation++;
+        clearTimers();
+
+        if (hls) {
+          hls.destroy();
+          hls = null;
+        }
+
+        if (media) {
+          media.pause();
+
+          if (media.tagName === "VIDEO") {
+            media.removeAttribute("src");
+            media.load();
+          }
+
+          media.remove();
+          media = null;
+        }
+
+        destroyed = false;
+      }
+
+      function showError(text) {
+        setStatus("ERROR", "error");
+        showMessage(text);
+        console.warn(`[${camera.name}] ${text}`);
+      }
+
+      function validateUrl() {
+        try {
+          const parsed = new URL(camera.url);
+          return parsed.protocol === "https:" || parsed.protocol === "http:";
+        } catch {
+          return false;
+        }
+      }
+
+      function reconnect() {
+        destroyPlayer();
+        setStatus("CONNECTING");
+        showMessage("Connecting…");
+        startCamera();
+      }
+
+      reconnectButton.addEventListener("click", reconnect);
+
+      function startCamera() {
+        if (!validateUrl()) {
+          showError("Invalid or missing camera URL.");
+          return;
+        }
+
+        const currentGeneration = generation;
+        destroyed = false;
+        reconnectAttempts = 0;
+
+        if (camera.type === "image") {
+          startSnapshot(currentGeneration);
+        } else if (camera.type === "mjpeg") {
+          startMjpeg(currentGeneration);
+        } else if (camera.type === "mp4") {
+          startVideo(currentGeneration, "mp4");
+        } else if (camera.type === "hls") {
+          startVideo(currentGeneration, "hls");
+        } else {
+          showError(`Unsupported camera type: ${camera.type}`);
+        }
+      }
+
+      // SNAPSHOT IMAGE: refresh without replacing a working image with a
+      // broken request. A new image is loaded before swapping it into view.
+      function startSnapshot(currentGeneration) {
         const image = document.createElement("img");
         image.className = "camera-image";
-        image.alt = camera.name;
-        image.loading = "eager";
+        image.alt = camera.name || "Camera snapshot";
         image.decoding = "async";
-
-        let hasLoaded = false;
-
-        image.addEventListener("load", () => {
-          hasLoaded = true;
-          setStatus("LIVE SNAPSHOT", "live");
-          message.classList.add("hidden");
-        });
-
-        image.addEventListener("error", () => {
-          setStatus("ERROR", "error");
-          showMessage("Snapshot unavailable. The image may be offline or blocked.");
-        });
+        media = image;
 
         container.insertBefore(image, message);
 
-        function refreshImage() {
-          // Cache-busting query parameter requests a fresh snapshot.
+        let firstLoad = true;
+        let requestInProgress = false;
+
+        function refreshSnapshot() {
+          if (currentGeneration !== generation || requestInProgress) return;
+
+          requestInProgress = true;
+
+          const nextImage = new Image();
           const separator = camera.url.includes("?") ? "&" : "?";
-          image.src = camera.url + separator + "_=" + Date.now();
+          nextImage.src = camera.url + separator + "_=" + Date.now();
+
+          nextImage.onload = () => {
+            requestInProgress = false;
+            if (currentGeneration !== generation) return;
+
+            image.src = nextImage.src;
+            setStatus("LIVE SNAPSHOT", "live");
+            hideMessage();
+            firstLoad = false;
+          };
+
+          nextImage.onerror = () => {
+            requestInProgress = false;
+            if (currentGeneration !== generation) return;
+
+            if (firstLoad) {
+              showError("Snapshot unavailable. The image may be offline or blocked.");
+            } else {
+              setStatus("STALE SNAPSHOT", "error");
+            }
+          };
         }
 
-        refreshImage();
+        refreshSnapshot();
 
         const seconds = Math.max(5, Number(camera.refreshSeconds) || 10);
-        setInterval(refreshImage, seconds * 1000);
-
-        return;
+        refreshTimer = setInterval(refreshSnapshot, seconds * 1000);
       }
 
-      // HLS VIDEO CAMERA
-      const video = document.createElement("video");
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.controls = false;
-      video.preload = "auto";
-      video.setAttribute("aria-label", camera.name);
+      // MJPEG: a continuous multipart JPEG stream can be shown in an <img>.
+      function startMjpeg(currentGeneration) {
+        const image = document.createElement("img");
+        image.className = "camera-mjpeg";
+        image.alt = camera.name || "MJPEG camera";
+        image.referrerPolicy = "no-referrer";
+        media = image;
 
-      container.insertBefore(video, message);
-
-      let hls = null;
-      let retryCount = 0;
-      let recoveryUsed = false;
-      let failed = false;
-
-      function showError(text) {
-        failed = true;
-        setStatus("ERROR", "error");
-        showMessage(text);
-        console.error(`[${camera.name}] ${text}`);
-      }
-
-      video.addEventListener("playing", () => {
-        failed = false;
-        retryCount = 0;
-        setStatus("PLAYING", "live");
-        message.classList.add("hidden");
-      });
-
-      video.addEventListener("waiting", () => {
-        if (!failed) setStatus("BUFFERING");
-      });
-
-      video.addEventListener("error", () => {
-        if (!failed) {
-          showError("Browser playback error. Check the stream URL and server response.");
-        }
-      });
-
-      if (!camera.url || !/^https?:\/\//i.test(camera.url)) {
-        showError("Invalid camera URL.");
-        return;
-      }
-
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = camera.url;
-
-        video.play().catch(() => {
-          showError("Playback failed. The stream may be unavailable.");
+        image.addEventListener("load", () => {
+          if (currentGeneration !== generation) return;
+          setStatus("CONNECTED", "live");
+          hideMessage();
         });
 
-        return;
-      }
-
-      if (!window.Hls || !Hls.isSupported()) {
-        showError("HLS playback is not supported in this browser.");
-        return;
-      }
-
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-        maxBufferLength: 20,
-        manifestLoadingMaxRetry: 2,
-        levelLoadingMaxRetry: 2,
-        fragLoadingMaxRetry: 2
-      });
-
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        hls.loadSource(camera.url);
-      });
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {
-          showError("Autoplay failed. Check browser playback settings.");
+        image.addEventListener("error", () => {
+          if (currentGeneration !== generation) return;
+          showError("MJPEG stream unavailable or blocked by the provider.");
         });
-      });
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error(
-          `[${camera.name}] HLS error:`,
-          data.type,
-          data.details,
-          data
-        );
+        container.insertBefore(image, message);
+        image.src = camera.url;
+      }
 
-        if (!data.fatal || failed || !hls) return;
+      // MP4 uses native video playback; HLS uses native HLS when available,
+      // otherwise hls.js. These are separate paths.
+      function startVideo(currentGeneration, kind) {
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.controls = true;
+        video.preload = "metadata";
+        video.setAttribute("aria-label", camera.name || "Camera video");
+        media = video;
 
-        if (
-          data.type === Hls.ErrorTypes.NETWORK_ERROR &&
-          retryCount < 2
-        ) {
-          retryCount++;
-          setStatus(`RETRY ${retryCount}/2`);
-          showMessage("Connection failed. Retrying…");
+        container.insertBefore(video, message);
 
-          setTimeout(() => {
-            if (hls && !failed) hls.startLoad();
-          }, 1500 * retryCount);
+        video.addEventListener("playing", () => {
+          if (currentGeneration !== generation) return;
+          reconnectAttempts = 0;
+          setStatus("PLAYING", "live");
+          hideMessage();
+        });
+
+        video.addEventListener("waiting", () => {
+          if (currentGeneration !== generation) return;
+          setStatus("BUFFERING");
+        });
+
+        video.addEventListener("stalled", () => {
+          if (currentGeneration !== generation) return;
+          setStatus("STALLED");
+        });
+
+        video.addEventListener("error", () => {
+          if (currentGeneration !== generation) return;
+
+          const errorCode = video.error ? video.error.code : 0;
+          showError(
+            kind === "mp4"
+              ? `MP4 playback error (${errorCode || "unknown"}). The URL may be offline or blocked.`
+              : `Video playback error (${errorCode || "unknown"}).`
+          );
+        });
+
+        if (kind === "mp4") {
+          video.src = camera.url;
+          video.load();
+
+          video.play().catch(() => {
+            // Controls remain available for a manual playback attempt.
+            setStatus("CLICK PLAY");
+            showMessage("Autoplay was blocked. Press Play on the video controls.");
+          });
 
           return;
         }
 
-        if (
-          data.type === Hls.ErrorTypes.MEDIA_ERROR &&
-          !recoveryUsed
-        ) {
-          recoveryUsed = true;
-          setStatus("RECOVERING");
-          showMessage("Recovering video playback…");
-          hls.recoverMediaError();
+        // Native HLS support (for example, Safari).
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = camera.url;
+
+          video.play().catch(() => {
+            setStatus("CLICK PLAY");
+            showMessage("Autoplay was blocked. Press Play on the video controls.");
+          });
+
           return;
         }
 
-        showError(
-          "Stream failed: " +
-          (data.details || data.type || "Unknown HLS error")
-        );
+        if (!window.Hls || !Hls.isSupported()) {
+          showError("HLS is not supported in this browser.");
+          return;
+        }
 
-        hls.destroy();
-        hls = null;
-      });
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 30,
+          maxBufferLength: 20,
+          manifestLoadingMaxRetry: 3,
+          levelLoadingMaxRetry: 3,
+          fragLoadingMaxRetry: 3,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingRetryDelay: 1000,
+          fragLoadingRetryDelay: 1000
+        });
 
-      // Stagger startup slightly; each camera still has its own player.
-      setTimeout(() => {
-        if (hls) {
-          setStatus("CONNECTING");
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+          if (currentGeneration !== generation || !hls) return;
+          hls.loadSource(camera.url);
+        });
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (currentGeneration !== generation) return;
+
+          video.play().catch(() => {
+            setStatus("CLICK PLAY");
+            showMessage("Autoplay was blocked. Press Play on the video controls.");
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (currentGeneration !== generation || !hls) return;
+
+          console.warn(
+            `[${camera.name}] HLS error:`,
+            data.type,
+            data.details
+          );
+
+          if (!data.fatal) return;
+
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR && reconnectAttempts < 2) {
+            reconnectAttempts++;
+            setStatus(`RETRY ${reconnectAttempts}/2`);
+            showMessage("Connection failed. Retrying…");
+
+            const delay = 1500 * reconnectAttempts;
+            retryTimer = setTimeout(() => {
+              if (
+                currentGeneration === generation &&
+                hls &&
+                !destroyed
+              ) {
+                hls.startLoad();
+              }
+            }, delay);
+
+            return;
+          }
+
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            setStatus("RECOVERING");
+            showMessage("Recovering video playback…");
+
+            try {
+              hls.recoverMediaError();
+              return;
+            } catch (error) {
+              console.warn(`[${camera.name}] Recovery failed`, error);
+            }
+          }
+
+          showError(
+            "HLS stream failed: " +
+            (data.details || data.type || "unknown error")
+          );
+
+          hls.destroy();
+          hls = null;
+        });
+
+        // Stagger player startup so many cameras don't all start together.
+        retryTimer = setTimeout(() => {
+          if (currentGeneration !== generation || !hls) return;
           hls.attachMedia(video);
+        }, index * 250);
+      }
+
+      startCamera();
+
+      players.push({
+        reconnect,
+        stop() {
+          destroyPlayer();
         }
-      }, index * 300);
+      });
     }
 
     cameras.forEach(createCamera);
+
+    cameraCount.textContent =
+      `${cameras.length} cameras configured · Streams may vary in availability`;
+
+    document.getElementById("reloadAll").addEventListener("click", () => {
+      players.forEach((player, index) => {
+        setTimeout(player.reconnect, index * 150);
+      });
+    });
+
+    // Stop active players when the page is being unloaded.
+    window.addEventListener("pagehide", () => {
+      players.forEach(player => player.stop());
+    });
   </script>
 </body>
 </html>
