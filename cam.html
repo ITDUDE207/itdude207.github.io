@@ -61,7 +61,12 @@
       gap: 10px;
       padding: 12px;
     }
-
+  .video-container iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
     .camera-title {
       font-weight: bold;
       font-size: 14px;
@@ -151,7 +156,22 @@
   <main>
     <div class="camera-grid" id="cameraGrid"></div>
   </main>
+  <div class="camera-card">
+    <div class="camera-title">
+        <h2>Las Vegas Airport</h2>
+        <span>Live</span>
+    </div>
 
+    <div class="video-container">
+        <iframe
+            src="https://opencctv.org/cameras/united-states/nevada/las-vegas/las-vegas-airport-airlive-210404"
+            title="Las Vegas Airport — Airlive"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+            loading="lazy">
+        </iframe>
+    </div>
+</div>
   <footer>
     Video streams may be delayed or unavailable.
     Snapshot cameras refresh automatically when supported by their provider.
