@@ -42,32 +42,6 @@
       padding: 16px;
     }
 
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 14px;
-      color: #9baaba;
-      font-size: 12px;
-    }
-
-    .toolbar button,
-    .camera-actions button {
-      border: 1px solid #354658;
-      border-radius: 5px;
-      padding: 7px 10px;
-      background: #182330;
-      color: #e8edf2;
-      cursor: pointer;
-    }
-
-    .toolbar button:hover,
-    .camera-actions button:hover {
-      background: #243447;
-    }
-
     .camera-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
@@ -156,18 +130,6 @@
       display: none;
     }
 
-    .camera-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 8px 10px;
-      border-top: 1px solid #273443;
-    }
-
-    .camera-actions button {
-      font-size: 11px;
-    }
-
     footer {
       padding: 18px;
       color: #8290a0;
@@ -203,20 +165,15 @@
   </header>
 
   <main>
-    <div class="toolbar">
-      <span id="cameraCount">Loading cameras…</span>
-      <button id="reloadAll" type="button">Reconnect all cameras</button>
-    </div>
-
     <div class="camera-grid" id="cameraGrid"></div>
   </main>
 
   <footer>
-    Video streams may be delayed or unavailable. Some providers block playback
-    on other websites or restrict access by region.
+    Video streams may be delayed or unavailable.
     Snapshot cameras refresh automatically when supported by their provider.
     <br>
-    <a href="cam.html">Open camera page</a>
+    If a camera is not loading, try refreshing:
+    <a href="cam.html">Refresh</a>
   </footer>
 
   <script>
@@ -242,9 +199,8 @@
       url: "https://example.com/camera.jpeg"
       refreshSeconds: 10
 
-    Note:
-    MJPEG must be a genuine continuous MJPEG endpoint.
-    A JPEG snapshot URL is not an MJPEG stream.
+    Copy a camera object and change its details.
+    Add a comma between camera objects.
     ==========================================================
     */
 
@@ -301,7 +257,7 @@
       {
         type: "hls",
         name: "Düsseldorf Airport — Airfield Camera",
-        location: "Düsseldorf, Germany",
+        location: "Düsseldorf Airport, Germany",
         url: "https://stream-5gw.1000eyes.de/cupertino/dused0c.stream/chunklist.m3u8"
       },
       {
@@ -347,11 +303,10 @@
         url: "https://s7.nysdot.skyvdn.com/rtplive/R10_383/playlist.m3u8"
       }
 
-      // Add more camera objects here, separated by commas.
+      // Add more camera objects here.
     ];
 
     const grid = document.getElementById("cameraGrid");
-    const cameraCount = document.getElementById("cameraCount");
     const players = [];
 
     function createCamera(camera, index) {
@@ -387,32 +342,16 @@
       message.textContent = "Connecting…";
 
       container.append(message);
-
-      const actions = document.createElement("div");
-      actions.className = "camera-actions";
-
-      const reconnectButton = document.createElement("button");
-      reconnectButton.type = "button";
-      reconnectButton.textContent = "Reconnect";
-
-      const openButton = document.createElement("button");
-      openButton.type = "button";
-      openButton.textContent = "Open source";
-      openButton.addEventListener("click", () => {
-        window.open(camera.url, "_blank", "noopener,noreferrer");
-      });
-
-      actions.append(reconnectButton, openButton);
-      card.append(heading, container, actions);
+      card.append(heading, container);
       grid.append(card);
 
       let hls = null;
       let media = null;
       let refreshTimer = null;
       let retryTimer = null;
-      let reconnectAttempts = 0;
-      let destroyed = false;
       let generation = 0;
+      let retryCount = 0;
+      let recoveryUsed = false;
 
       function setStatus(text, type = "") {
         status.textContent = text;
@@ -446,9 +385,8 @@
         }
 
         if (media) {
-          media.pause();
-
           if (media.tagName === "VIDEO") {
+            media.pause();
             media.removeAttribute("src");
             media.load();
           }
@@ -456,8 +394,6 @@
           media.remove();
           media = null;
         }
-
-        destroyed = false;
       }
 
       function showError(text) {
@@ -469,7 +405,8 @@
       function validateUrl() {
         try {
           const parsed = new URL(camera.url);
-          return parsed.protocol === "https:" || parsed.protocol === "http:";
+          return parsed.protocol === "https:" ||
+                 parsed.protocol === "http:";
         } catch {
           return false;
         }
@@ -477,12 +414,12 @@
 
       function reconnect() {
         destroyPlayer();
+        retryCount = 0;
+        recoveryUsed = false;
         setStatus("CONNECTING");
         showMessage("Connecting…");
         startCamera();
       }
-
-      reconnectButton.addEventListener("click", reconnect);
 
       function startCamera() {
         if (!validateUrl()) {
@@ -491,8 +428,6 @@
         }
 
         const currentGeneration = generation;
-        destroyed = false;
-        reconnectAttempts = 0;
 
         if (camera.type === "image") {
           startSnapshot(currentGeneration);
@@ -507,8 +442,7 @@
         }
       }
 
-      // SNAPSHOT IMAGE: refresh without replacing a working image with a
-      // broken request. A new image is loaded before swapping it into view.
+      // IMAGE SNAPSHOT
       function startSnapshot(currentGeneration) {
         const image = document.createElement("img");
         image.className = "camera-image";
@@ -522,7 +456,9 @@
         let requestInProgress = false;
 
         function refreshSnapshot() {
-          if (currentGeneration !== generation || requestInProgress) return;
+          if (currentGeneration !== generation || requestInProgress) {
+            return;
+          }
 
           requestInProgress = true;
 
@@ -545,7 +481,9 @@
             if (currentGeneration !== generation) return;
 
             if (firstLoad) {
-              showError("Snapshot unavailable. The image may be offline or blocked.");
+              showError(
+                "Snapshot unavailable. The image may be offline or blocked."
+              );
             } else {
               setStatus("STALE SNAPSHOT", "error");
             }
@@ -554,16 +492,19 @@
 
         refreshSnapshot();
 
-        const seconds = Math.max(5, Number(camera.refreshSeconds) || 10);
+        const seconds = Math.max(
+          5,
+          Number(camera.refreshSeconds) || 10
+        );
+
         refreshTimer = setInterval(refreshSnapshot, seconds * 1000);
       }
 
-      // MJPEG: a continuous multipart JPEG stream can be shown in an <img>.
+      // MJPEG CONTINUOUS IMAGE STREAM
       function startMjpeg(currentGeneration) {
         const image = document.createElement("img");
         image.className = "camera-mjpeg";
         image.alt = camera.name || "MJPEG camera";
-        image.referrerPolicy = "no-referrer";
         media = image;
 
         image.addEventListener("load", () => {
@@ -574,30 +515,36 @@
 
         image.addEventListener("error", () => {
           if (currentGeneration !== generation) return;
-          showError("MJPEG stream unavailable or blocked by the provider.");
+          showError(
+            "MJPEG stream unavailable or blocked by the provider."
+          );
         });
 
         container.insertBefore(image, message);
         image.src = camera.url;
       }
 
-      // MP4 uses native video playback; HLS uses native HLS when available,
-      // otherwise hls.js. These are separate paths.
+      // MP4 AND HLS VIDEO
       function startVideo(currentGeneration, kind) {
         const video = document.createElement("video");
+
         video.autoplay = true;
         video.muted = true;
+        video.defaultMuted = true;
         video.playsInline = true;
-        video.controls = true;
-        video.preload = "metadata";
+        video.controls = false;
+        video.preload = "auto";
+        video.setAttribute("muted", "");
+        video.setAttribute("playsinline", "");
         video.setAttribute("aria-label", camera.name || "Camera video");
-        media = video;
 
+        media = video;
         container.insertBefore(video, message);
 
         video.addEventListener("playing", () => {
           if (currentGeneration !== generation) return;
-          reconnectAttempts = 0;
+
+          retryCount = 0;
           setStatus("PLAYING", "live");
           hideMessage();
         });
@@ -616,40 +563,59 @@
           if (currentGeneration !== generation) return;
 
           const errorCode = video.error ? video.error.code : 0;
+
           showError(
-            kind === "mp4"
-              ? `MP4 playback error (${errorCode || "unknown"}). The URL may be offline or blocked.`
-              : `Video playback error (${errorCode || "unknown"}).`
+            `${kind.toUpperCase()} playback error ` +
+            `(${errorCode || "unknown"}). The stream may be offline or blocked.`
           );
         });
+
+        function attemptAutoplay() {
+          if (currentGeneration !== generation || media !== video) return;
+
+          video.play().then(() => {
+            if (currentGeneration !== generation) return;
+            hideMessage();
+          }).catch(() => {
+            if (currentGeneration !== generation) return;
+
+            setStatus("RETRYING");
+            showMessage("Waiting for video playback…");
+
+            // Retry a few times, but don't create an endless retry loop.
+            if (retryCount < 3) {
+              retryCount++;
+
+              retryTimer = setTimeout(
+                attemptAutoplay,
+                2000 * retryCount
+              );
+            } else {
+              setStatus("PLAY BLOCKED");
+              showMessage(
+                "Autoplay was blocked by the browser or the stream could not start."
+              );
+            }
+          });
+        }
 
         if (kind === "mp4") {
           video.src = camera.url;
           video.load();
-
-          video.play().catch(() => {
-            // Controls remain available for a manual playback attempt.
-            setStatus("CLICK PLAY");
-            showMessage("Autoplay was blocked. Press Play on the video controls.");
-          });
-
+          attemptAutoplay();
           return;
         }
 
-        // Native HLS support (for example, Safari).
+        // Native HLS playback where available.
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = camera.url;
-
-          video.play().catch(() => {
-            setStatus("CLICK PLAY");
-            showMessage("Autoplay was blocked. Press Play on the video controls.");
-          });
-
+          attemptAutoplay();
           return;
         }
 
+        // HLS playback through hls.js for browsers such as Chrome and Edge.
         if (!window.Hls || !Hls.isSupported()) {
-          showError("HLS is not supported in this browser.");
+          showError("HLS playback is not supported in this browser.");
           return;
         }
 
@@ -673,11 +639,7 @@
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (currentGeneration !== generation) return;
-
-          video.play().catch(() => {
-            setStatus("CLICK PLAY");
-            showMessage("Autoplay was blocked. Press Play on the video controls.");
-          });
+          attemptAutoplay();
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
@@ -691,35 +653,36 @@
 
           if (!data.fatal) return;
 
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR && reconnectAttempts < 2) {
-            reconnectAttempts++;
-            setStatus(`RETRY ${reconnectAttempts}/2`);
+          if (
+            data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+            retryCount < 2
+          ) {
+            retryCount++;
+            setStatus(`RETRY ${retryCount}/2`);
             showMessage("Connection failed. Retrying…");
 
-            const delay = 1500 * reconnectAttempts;
             retryTimer = setTimeout(() => {
               if (
                 currentGeneration === generation &&
-                hls &&
-                !destroyed
+                hls
               ) {
                 hls.startLoad();
               }
-            }, delay);
+            }, 1500 * retryCount);
 
             return;
           }
 
-          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          if (
+            data.type === Hls.ErrorTypes.MEDIA_ERROR &&
+            !recoveryUsed
+          ) {
+            recoveryUsed = true;
             setStatus("RECOVERING");
             showMessage("Recovering video playback…");
 
-            try {
-              hls.recoverMediaError();
-              return;
-            } catch (error) {
-              console.warn(`[${camera.name}] Recovery failed`, error);
-            }
+            hls.recoverMediaError();
+            return;
           }
 
           showError(
@@ -731,7 +694,7 @@
           hls = null;
         });
 
-        // Stagger player startup so many cameras don't all start together.
+        // Stagger startup to reduce the initial network burst.
         retryTimer = setTimeout(() => {
           if (currentGeneration !== generation || !hls) return;
           hls.attachMedia(video);
@@ -742,24 +705,13 @@
 
       players.push({
         reconnect,
-        stop() {
-          destroyPlayer();
-        }
+        stop: destroyPlayer
       });
     }
 
     cameras.forEach(createCamera);
 
-    cameraCount.textContent =
-      `${cameras.length} cameras configured · Streams may vary in availability`;
-
-    document.getElementById("reloadAll").addEventListener("click", () => {
-      players.forEach((player, index) => {
-        setTimeout(player.reconnect, index * 150);
-      });
-    });
-
-    // Stop active players when the page is being unloaded.
+    // Release resources when the page is being unloaded.
     window.addEventListener("pagehide", () => {
       players.forEach(player => player.stop());
     });
